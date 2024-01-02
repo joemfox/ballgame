@@ -13,3 +13,7 @@ nameparser
 mlb-statsapi
 django-extensions
 python-dotenv==0.21.1
+djangorestframework
+markdown
+django-filter
+django-cors-headers
