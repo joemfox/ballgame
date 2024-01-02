@@ -1,6 +1,9 @@
 # secrets
 .env
 
+# chadwick register
+register/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

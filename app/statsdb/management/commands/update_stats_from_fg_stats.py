@@ -39,6 +39,9 @@ class Command(BaseCommand):
                 if obj.count() > 0:
                     obj = obj[0]
 
+                    if obj.name == "":
+                        obj.name = row['Name']
+
                     stats_dict["hits"] = utils.to_int(row['H'])
                     stats_dict["2b"] = utils.to_int(row['2B'])
                     stats_dict["3b"] = utils.to_int(row['3B'])

@@ -1,16 +1,21 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import Players from './ui/Players.jsx'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+
+import Players from './components/Players.jsx'
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <>
-      <Players/>
-    </>
+    <ResizablePanelGroup className="max-w-xl" direction="horizontal">
+      <ResizablePanel>One</ResizablePanel>
+      <ResizableHandle />
+      <ResizablePanel><Players/></ResizablePanel>
+    </ResizablePanelGroup>
   )
 }
 

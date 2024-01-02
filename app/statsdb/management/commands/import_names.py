@@ -20,10 +20,10 @@ class Command(BaseCommand):
     def gen_people_map(self):
         people_map = {}
 
-        os.system("cd ../../register && git pull origin master")
+        # os.system("cd register && git pull origin master")
 
         for x in range(0x0,0xf):
-            with open(f'../../register/data/people-{x:x}.csv', "r") as readfile:
+            with open(f'register/data/people-{x:x}.csv', "r") as readfile:
                 for c in csv.DictReader(readfile):
                     if c["key_fangraphs"] != "":
                         people_map[c["key_fangraphs"]] = dict(c)
@@ -32,7 +32,7 @@ class Command(BaseCommand):
             writefile.write(json.dumps(people_map))
 
     def load_ids(self):
-        models.Player.objects.update(mlbam_id=None)
+        # models.Player.objects.update(mlbam_id=None)
         with open("data/people_map.json", "r") as readfile:
             people_map = json.loads(readfile.read())
 
@@ -47,7 +47,7 @@ class Command(BaseCommand):
                         p.save()
 
     def load_names(self):
-        models.Player.objects.update(mlbam_id=None)
+        # models.Player.objects.update(mlbam_id=None)
         with open("data/people_map.json", "r") as readfile:
             people_map = json.loads(readfile.read())
 

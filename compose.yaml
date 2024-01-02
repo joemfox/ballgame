@@ -1,6 +1,6 @@
 services:
   django:
-    container_name: ballgame
+    container_name: statsdb
     build: app
     environment:
       - POSTGRES_HOST=postgres
@@ -25,12 +25,12 @@ services:
     ports:
       - "5432:5432"
     restart: always
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4:latest
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_MAIL}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PW}
+  frontend:
+    container_name: ballgame
+    build: ./app/ballgame
+    volumes: 
+      - ./app/ballgame:/app/ballgame
     ports:
-      - "5050:80"
-    restart: always
+      - "5173:5173"
+    stdin_open: true
+    command: npm run dev
