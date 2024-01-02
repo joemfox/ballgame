@@ -11,7 +11,7 @@ function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <ResizablePanelGroup className="max-w-xl" direction="horizontal">
+    <ResizablePanelGroup className="max-w-xl border" direction="horizontal">
       <ResizablePanel>One</ResizablePanel>
       <ResizableHandle />
       <ResizablePanel><Players/></ResizablePanel>
