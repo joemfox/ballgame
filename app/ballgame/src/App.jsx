@@ -8,11 +8,9 @@ import {
 import Players from './components/Players.jsx'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <ResizablePanelGroup className="max-w-xl border" direction="horizontal">
-      <ResizablePanel>One</ResizablePanel>
+    <ResizablePanelGroup className="border" direction="horizontal">
+      <ResizablePanel defaultSize={20}>One</ResizablePanel>
       <ResizableHandle />
       <ResizablePanel><Players/></ResizablePanel>
     </ResizablePanelGroup>
