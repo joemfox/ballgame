@@ -65,25 +65,25 @@ const playerTableColumns = [
 
 export default function Players() {
     const [players, setPlayers] = useState([])
-    const [{pageIndex, pageSize}, setPagination] = useState({pageIndex:1,pageSize:100})
+    const [{pageIndex, pageSize}, setPagination] = useState({pageIndex:0,pageSize:100})
     const [pageCount, setPageCount] = useState(-1)
 
     useEffect(() => {
-        if(pageIndex && typeof(pageIndex) !== 'undefined'){
-        axios.get(`http://localhost:8000/api/players?page=${pageIndex}`)
+        axios.get(`http://localhost:8000/api/players?page=${pageIndex+1}`)
             .then(response => {
                 if (response.data.count) {
+                    console.log(response.data)
                     let count = Math.ceil(response.data.count/response.data.results.length)
                     setPageCount(count)
-                    setPagination({pageSize:response.data.results.length})
+                    setPagination({pageIndex:pageIndex,pageSize:response.data.results.length})
+                    setPlayers(response.data.results)
                 }
-                setPlayers(response.data.results)
             })
             .catch(err => {
                 console.log(err)
             })
-        }
     }, [pageIndex])
+    console.log('pagination state: ',{pageIndex,pageSize})
 
     return (
         <div className="container mx-auto py-10">

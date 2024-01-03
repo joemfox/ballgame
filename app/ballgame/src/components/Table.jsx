@@ -18,13 +18,16 @@ export function DataTable({
 }) {
     const [sorting, setSorting] = React.useState([])
     const pagination = useMemo(() => {
+        console.log('pagination memoized: ',{
+            pageIndex:pageIndex,
+            pageSize:pageSize
+        })
         return {
             pageIndex:pageIndex,
             pageSize:pageSize
         }
     },[pageIndex,pageSize])
 
-    console.log(pagination)
 
     const table = useReactTable({
         data,
@@ -35,7 +38,7 @@ export function DataTable({
         // onColumnFiltersChange: setColumnFilters,
         // getFilteredRowModel: getFilteredRowModel(),
         manualPagination:true,
-        onPaginationChange:updater => {console.log(pageIndex);let newPagination = updater(pagination); console.log(newPagination);setPagination(newPagination)},
+        onPaginationChange:setPagination,
         pageCount: pageCount,
         state:{
             pagination
@@ -45,6 +48,29 @@ export function DataTable({
 
     return (
         <div>
+            <div className="flex items-center justify-end space-x-2 py-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        table.previousPage()
+                        
+                    }}
+                    disabled={!table.getCanPreviousPage()}
+                >
+                    Previous
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        table.nextPage()
+                    }}
+                    disabled={!table.getCanNextPage()}
+                >
+                    Next
+                </Button>
+            </div>
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
@@ -87,7 +113,8 @@ export function DataTable({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                        table.nextPage()
+                        table.previousPage()
+                        
                     }}
                     disabled={!table.getCanPreviousPage()}
                 >
@@ -97,9 +124,9 @@ export function DataTable({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                        table.previousPage()
+                        table.nextPage()
                     }}
-                    // disabled={!table.getCanNextPage()}
+                    disabled={!table.getCanNextPage()}
                 >
                     Next
                 </Button>
