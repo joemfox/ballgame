@@ -127,6 +127,7 @@ export default function Players() {
                 setData={setPlayers}
                 pageIndex={pageIndex} 
                 pageSize={pageSize}
+                pagination={{pageIndex:pageIndex,pageSize:pageSize}}
                 pageCount={pageCount}
                 setPagination={setPagination}
                 sorting={sorting}

@@ -13,39 +13,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-function useSkipper() {
-    const shouldSkipRef = React.useRef(true)
-    const shouldSkip = shouldSkipRef.current
-  
-    // Wrap a function with this to skip a pagination reset temporarily
-    const skip = React.useCallback(() => {
-      shouldSkipRef.current = false
-    }, [])
-  
-    React.useEffect(() => {
-      shouldSkipRef.current = true
-    })
-  
-    return [shouldSkip, skip]
-  }
 
 export function DataTable({
-    columns, data, setData, pageIndex, pageSize, setPagination, pageCount, sorting, setSorting, filters, setColumnFilters
+    columns, data, setData, pagination, setPagination, pageCount, sorting, setSorting, filters, setColumnFilters
 }) {
-
-    const pagination = useMemo(() => {
-        return {
-            pageIndex:pageIndex,
-            pageSize:pageSize
-        }
-    },[pageIndex,pageSize])
-
-    const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
     const table = useReactTable({
         data,
         columns,
-        autoResetPageIndex,
         getCoreRowModel: getCoreRowModel(),
         onSortingChange: setSorting,
         manualSorting:true,
@@ -61,7 +36,6 @@ export function DataTable({
         },
         meta:{
             updateRow:(rowIndex,value) => {
-                skipAutoResetPageIndex()
                 setData(f => {
                     f = f.map((row,index) => {
                         if(index === rowIndex) {
@@ -85,6 +59,7 @@ export function DataTable({
                     // value={(table.getColumn("name")?.getFilterValue()) ?? ""}
                     onChange={(event) =>{
                         table.getColumn("name")?.setFilterValue(event.target.value)
+                        table.setPageIndex(0)
                     }}
                     className="max-w-md"/>
                 <Button

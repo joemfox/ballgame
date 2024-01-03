@@ -11,6 +11,11 @@ class PlayerSerializer(serializers.ModelSerializer):
         fields = ('fg_id','mlbam_id','name','first_name','last_name','team','stats')
 
 class TeamSerializer(serializers.ModelSerializer):
+    players = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field="name"
+    )
     class Meta:
         model = Team
-        fields = ["city","abbreviation","nickname","division","owner","owner_email"]
+        fields = ["city","abbreviation","nickname","division","owner","owner_email","players"]
