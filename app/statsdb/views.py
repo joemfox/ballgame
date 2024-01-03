@@ -11,7 +11,7 @@ class PlayerList(generics.ListAPIView):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
     filter_backends = [filters.OrderingFilter,filters.SearchFilter]
-    ordering_fields = ['name','first_name','last_name']
+    ordering_fields = ['team','name','first_name','last_name']
     search_fields = ['name']
 
 @permission_classes((permissions.AllowAny,))
@@ -48,5 +48,6 @@ def add_player_to_team(request):
     player.set_owned()
     player.team = team
     player.save()
-    return Response(status=status.HTTP_200_OK)
+    serializer = PlayerSerializer(player)
+    return Response(status=status.HTTP_200_OK,data=serializer.data)
     
