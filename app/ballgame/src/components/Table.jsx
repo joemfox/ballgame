@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 export function DataTable({
-    columns, data, pageIndex, pageSize, setPagination, pageCount, sorting, setSorting
+    columns, data, pageIndex, pageSize, setPagination, pageCount, sorting, setSorting, filters, setColumnFilters
 }) {
 
     const pagination = useMemo(() => {
@@ -32,15 +32,15 @@ export function DataTable({
         getCoreRowModel: getCoreRowModel(),
         onSortingChange: setSorting,
         manualSorting:true,
-        // getSortedRowModel: getSortedRowModel(),
-        // onColumnFiltersChange: setColumnFilters,
-        // getFilteredRowModel: getFilteredRowModel(),
+        onColumnFiltersChange: setColumnFilters,
+        manualFiltering:true,
         manualPagination:true,
         onPaginationChange:setPagination,
         pageCount: pageCount,
         state:{
             pagination,
-            sorting
+            sorting,
+            filters
         },
         debugTable:false
     })
@@ -48,6 +48,13 @@ export function DataTable({
     return (
         <div>
             <div className="flex items-center justify-end space-x-2 py-4">
+                <Input 
+                    placeholder="Filter by name ..."
+                    // value={(table.getColumn("name")?.getFilterValue()) ?? ""}
+                    onChange={(event) =>{
+                        table.getColumn("name")?.setFilterValue(event.target.value)
+                    }}
+                    className="max-w-md"/>
                 <Button
                     variant="outline"
                     size="sm"

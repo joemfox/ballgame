@@ -9,8 +9,9 @@ from .serializers import *
 class PlayerList(generics.ListAPIView):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [filters.OrderingFilter,filters.SearchFilter]
     ordering_fields = ['name','first_name','last_name']
+    search_fields = ['name']
         
 
 @api_view(['GET'])

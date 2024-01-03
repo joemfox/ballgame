@@ -78,12 +78,15 @@ export default function Players() {
     const [pageCount, setPageCount] = useState(-1)
 
     const [sorting, setSorting] = React.useState([])
+    const [filters, setColumnFilters] = React.useState([])
 
     useEffect(() => {
+        console.log(filters)
         axios.get(`http://localhost:8000/api/players`,{
             params:{
                 page: pageIndex+1,
-                ordering:sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null
+                ordering:sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null,
+                search:filters.map(d => d.value).join('')
             }
         })
             .then(response => {
@@ -98,7 +101,7 @@ export default function Players() {
             .catch(err => {
                 console.log(err)
             })
-    }, [pageIndex,sorting])
+    }, [pageIndex,sorting,filters])
     console.log('pagination state: ',{pageIndex,pageSize})
 
     return (
@@ -112,6 +115,8 @@ export default function Players() {
                 setPagination={setPagination}
                 sorting={sorting}
                 setSorting={setSorting}
+                filters={filters}
+                setColumnFilters={setColumnFilters}
                 />
         </div>
     )
