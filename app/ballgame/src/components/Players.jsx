@@ -55,7 +55,16 @@ const playerTableColumns = [
     },
     {
         accessorKey: "name",
-        header: "name"
+        header: ({column}) => {
+            return (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+                        Name
+                        <ArrowUpDown className="ml-2 h-4 w-4"/>
+                    </Button>
+            )
+        }
     },
     {
         accessorKey: 'stats',
@@ -68,8 +77,15 @@ export default function Players() {
     const [{pageIndex, pageSize}, setPagination] = useState({pageIndex:0,pageSize:100})
     const [pageCount, setPageCount] = useState(-1)
 
+    const [sorting, setSorting] = React.useState([])
+
     useEffect(() => {
-        axios.get(`http://localhost:8000/api/players?page=${pageIndex+1}`)
+        axios.get(`http://localhost:8000/api/players`,{
+            params:{
+                page: pageIndex+1,
+                ordering:sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null
+            }
+        })
             .then(response => {
                 if (response.data.count) {
                     console.log(response.data)
@@ -82,7 +98,7 @@ export default function Players() {
             .catch(err => {
                 console.log(err)
             })
-    }, [pageIndex])
+    }, [pageIndex,sorting])
     console.log('pagination state: ',{pageIndex,pageSize})
 
     return (
@@ -94,6 +110,8 @@ export default function Players() {
                 pageSize={pageSize}
                 pageCount={pageCount}
                 setPagination={setPagination}
+                sorting={sorting}
+                setSorting={setSorting}
                 />
         </div>
     )

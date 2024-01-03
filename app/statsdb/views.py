@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework import status, permissions, generics
+from rest_framework import status, permissions, generics, filters
 
 from .models import Team, Player
 from .serializers import *
@@ -9,6 +9,8 @@ from .serializers import *
 class PlayerList(generics.ListAPIView):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['name','first_name','last_name']
         
 
 @api_view(['GET'])

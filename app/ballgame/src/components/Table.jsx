@@ -14,14 +14,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 export function DataTable({
-    columns, data, pageIndex, pageSize, setPagination, pageCount
+    columns, data, pageIndex, pageSize, setPagination, pageCount, sorting, setSorting
 }) {
-    const [sorting, setSorting] = React.useState([])
+
     const pagination = useMemo(() => {
-        console.log('pagination memoized: ',{
-            pageIndex:pageIndex,
-            pageSize:pageSize
-        })
         return {
             pageIndex:pageIndex,
             pageSize:pageSize
@@ -32,8 +28,10 @@ export function DataTable({
     const table = useReactTable({
         data,
         columns,
+        autoResetPageIndex:true,
         getCoreRowModel: getCoreRowModel(),
-        // onSortingChange: setSorting,
+        onSortingChange: setSorting,
+        manualSorting:true,
         // getSortedRowModel: getSortedRowModel(),
         // onColumnFiltersChange: setColumnFilters,
         // getFilteredRowModel: getFilteredRowModel(),
@@ -41,7 +39,8 @@ export function DataTable({
         onPaginationChange:setPagination,
         pageCount: pageCount,
         state:{
-            pagination
+            pagination,
+            sorting
         },
         debugTable:false
     })
