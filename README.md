@@ -2,6 +2,18 @@
 
 This is a Docker project. To get started, run `docker compose up --d` from the project root.
 
+*jan. 2*
+- correctly set up tailwind + shadcn/ui
+- implemented player list data table
+- implemented add to team API endpoint
+- implemented player list sorting
+- implemented player list searching
+- enabled server side pagination on player list
+- set up client side data updating when adding to team
+- next: fix pagination on client side (table always wants to go backward for some reason)
+- after: create the dashboard
+- also: work on user authentication
+
 *jan. 1*
 - created vite app for frontend
 - ballgame container is now the frontend react/vite app instead of a django app
