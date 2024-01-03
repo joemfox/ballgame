@@ -31,7 +31,15 @@ const playerTableColumns = [
                     <DropdownMenuContent align="start">
                         <DropdownMenuLabel>Player actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() => console.log('add to team API endpoint')}
+                            onClick={() => {
+                                axios.post('http://localhost:8000/api/add-player',{id:player.fg_id,team_id:"TST"})
+                                    .then(response => {
+                                        
+                                    })
+                                    .catch(err => {
+                                        console.error(err)
+                                    })
+                            }}
                         >
                             Add to team
                         </DropdownMenuItem>

@@ -4,4 +4,9 @@ from .models import Player, Team, Owner, BattingStatLine, PitchingStatLine
 class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Player
-        fields = ('mlbam_id','name','first_name','last_name','team','stats')
+        fields = ('fg_id','mlbam_id','name','first_name','last_name','team','stats')
+
+class TeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = ["city","abbreviation","nickname","division","owner","owner_email"]
