@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
 from nameparser import HumanName
+from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES
 
 class BaseModel(models.Model):
     active = models.BooleanField(default=True)
@@ -107,45 +108,12 @@ class Team(BaseModel):
 
 
 class Player(BaseModel):
-    PITCHER = "P"
-    STARTER = "SP"
-    RELIEVER = "RP"
-    CATCHER = "C"
-    INFIELD = "IF"
-    OUTFIELD = "OF"
-    FIRSTBASE = "1B"
-    SECONDBASE = "2B"
-    SHORTSTOP = "SS"
-    THIRDBASE = "3B"
-    LEFTFIELD = "LF"
-    CENTERFIELD = "CF"
-    RIGHTFIELD = "RF"
-    INFIELD_OUTFIELD = "IF-OF"
-    PITCHER_OF = "OF-P"
-    PITCHER_IF = "IF-P"
-    PLAYER_POSITION_CHOICES = (
-        (PITCHER, "Pitcher"),
-        (STARTER, "Starter"),
-        (RELIEVER, "Reliever"),
-        (CATCHER, "Catcher"),
-        (INFIELD, "Infield"),
-        (OUTFIELD, "Outfield"),
-        (FIRSTBASE, "First base"),
-        (SECONDBASE, "Second base"),
-        (SHORTSTOP, "Shortstop"),
-        (THIRDBASE, "Third base"),
-        (LEFTFIELD, "Left field"),
-        (CENTERFIELD, "Center field"),
-        (RIGHTFIELD, "Right field"),
-        (INFIELD_OUTFIELD, "IF-OF"),
-        (PITCHER_OF, "OF-P"),
-        (PITCHER_IF, "IF-P"),
-    )
+
     name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255, null=True)
     first_name = models.CharField(max_length=255, null=True)
     positions = ArrayField(
-        models.CharField(max_length=2,null=True)
+        models.CharField(max_length=2,null=True, choices=POSITIONS_CHOICES)
     )
     position = models.CharField(
         max_length=255, null=True, choices=PLAYER_POSITION_CHOICES

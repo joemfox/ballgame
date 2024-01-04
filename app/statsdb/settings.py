@@ -32,7 +32,13 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'corsheaders',
+    'django_filters',
+    'crispy_forms',
+    'crispy_bootstrap4',
 ]
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -211,3 +217,40 @@ CURRENT_SEASON = 2024
 CURRENT_SEASON_TYPE = "offseason"
 
 DATEFORMAT = "%Y-%m-%d"
+
+PITCHER = "P"
+STARTER = "SP"
+RELIEVER = "RP"
+CATCHER = "C"
+INFIELD = "IF"
+OUTFIELD = "OF"
+FIRSTBASE = "1B"
+SECONDBASE = "2B"
+SHORTSTOP = "SS"
+THIRDBASE = "3B"
+LEFTFIELD = "LF"
+CENTERFIELD = "CF"
+RIGHTFIELD = "RF"
+INFIELD_OUTFIELD = "IF-OF"
+PITCHER_OF = "OF-P"
+PITCHER_IF = "IF-P"
+PLAYER_POSITION_CHOICES = (
+    (PITCHER, "Pitcher"),
+    (INFIELD, "Infield"),
+    (OUTFIELD, "Outfield"),
+    (INFIELD_OUTFIELD, "IF-OF"),
+    (PITCHER_OF, "OF-P"),
+    (PITCHER_IF, "IF-P"),
+)
+POSITIONS_CHOICES = (
+    (STARTER, "Starter"),
+    (RELIEVER, "Reliever"),
+    (CATCHER, "Catcher"),
+    (FIRSTBASE, "First base"),
+    (SECONDBASE, "Second base"),
+    (SHORTSTOP, "Shortstop"),
+    (THIRDBASE, "Third base"),
+    (LEFTFIELD, "Left field"),
+    (CENTERFIELD, "Center field"),
+    (RIGHTFIELD, "Right field"),
+)

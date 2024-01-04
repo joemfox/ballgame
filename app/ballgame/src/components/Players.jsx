@@ -68,8 +68,12 @@ const playerTableColumns = [
         }
     },
     {
-        accessorKey: "mlbam_id",
+        accessorKey: "fg_id",
         header: "id"
+    },
+    {
+        accessorKey:'positions',
+        header:"positions"
     },
     {
         accessorKey: "name",

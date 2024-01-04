@@ -1,16 +1,33 @@
+from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.forms import SimpleArrayField
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status, permissions, generics, filters
+from django_filters import rest_framework as django_filters
 import sys
 
+from .settings import POSITIONS_CHOICES
 from .models import Team, Player
 from .serializers import *
+
+class PlayerFilter(django_filters.FilterSet):
+    # filter for players by position, even if they have more positions available
+    base_field_class = SimpleArrayField
+    positions = django_filters.MultipleChoiceFilter(field_name="positions",choices=POSITIONS_CHOICES, method="filter_positions")
+
+    def filter_positions(self, queryset, name, value):
+        return queryset.filter(positions__overlap=value)
+    
+    class Meta:
+        model = Player
+        fields = ['positions']
 
 @permission_classes((permissions.AllowAny,))
 class PlayerList(generics.ListAPIView):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
-    filter_backends = [filters.OrderingFilter,filters.SearchFilter]
+    filter_backends = [filters.OrderingFilter,filters.SearchFilter,django_filters.DjangoFilterBackend]
+    filterset_class = PlayerFilter
     ordering_fields = ['team','name','first_name','last_name']
     search_fields = ['name']
 

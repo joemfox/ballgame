@@ -8,7 +8,7 @@ class PlayerSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Player
-        fields = ('fg_id','mlbam_id','name','first_name','last_name','team','stats')
+        fields = ('fg_id','mlbam_id','name','first_name','last_name','positions','team','stats')
 
 class TeamSerializer(serializers.ModelSerializer):
     players = serializers.SlugRelatedField(
