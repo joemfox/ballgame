@@ -239,7 +239,7 @@ class Membership(BaseModel):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     date_added = models.DateField()
 
-# VALIDATE LINEUPS
+# VALIDATE LINEUPS 
 def lineup_changed(sender,**kwargs):
     if kwargs['instance'].lineup.count() > 16:
         raise ValidationError("Too many players on roster (limit 16)")

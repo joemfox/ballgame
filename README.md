@@ -2,6 +2,13 @@
 
 This is a Docker project. To get started, run `docker compose up --d` from the project root.
 
+*jan. 3*
+- created Membership intermediate class for adding player to team
+- added many-to-many relationship to Team for use as a lineup
+- added position multiselect filtering API
+- added frontend for position multiselect
+- next: validate lineups/create position slots somehow
+
 *jan. 2*
 - correctly set up tailwind + shadcn/ui
 - implemented player list data table
