@@ -1,3 +1,4 @@
+import datetime
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
 from rest_framework.response import Response
@@ -7,7 +8,7 @@ from django_filters import rest_framework as django_filters
 import sys
 
 from .settings import POSITIONS_CHOICES
-from .models import Team, Player
+from .models import Team, Player, Membership
 from .serializers import *
 
 class PlayerFilter(django_filters.FilterSet):
@@ -62,8 +63,16 @@ def add_player_to_team(request):
     except Team.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND,data="Team not found")
     
+    membership = Membership(
+        player=player,
+        team=team,
+        date_added=datetime.datetime.now()
+    )
+
+    membership.save()
+
     player.set_owned()
-    player.team = team
+    player.team_assigned = team
     player.save()
     serializer = PlayerSerializer(player)
     return Response(status=status.HTTP_200_OK,data=serializer.data)

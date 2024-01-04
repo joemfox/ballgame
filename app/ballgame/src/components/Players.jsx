@@ -55,7 +55,7 @@ const playerTableColumns = [
 
     },
     {
-        accessorKey: "team",
+        accessorKey: "team_assigned",
         header: ({ column }) => {
             return (
                 <Button

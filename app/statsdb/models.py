@@ -1,6 +1,8 @@
 import datetime
 from dateutil.relativedelta import *
 
+from django.db.models.signals import m2m_changed
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
@@ -43,45 +45,8 @@ class Team(BaseModel):
     owner_email = models.CharField(max_length=255, null=True, blank=True)
     championships = ArrayField(models.CharField(max_length=4), blank=True, null=True)
 
-    # LIVE STATS!
-    ls_hits = models.IntegerField(blank=True, null=True)
-    ls_2b = models.IntegerField(blank=True, null=True)
-    ls_3b = models.IntegerField(blank=True, null=True)
-    ls_hr = models.IntegerField(blank=True, null=True)
-    ls_sb = models.IntegerField(blank=True, null=True)
-    ls_runs = models.IntegerField(blank=True, null=True)
-    ls_rbi = models.IntegerField(blank=True, null=True)
-    ls_k = models.IntegerField(blank=True, null=True)
-    ls_bb = models.IntegerField(blank=True, null=True)
-    ls_plate_appearances = models.IntegerField(blank=True, null=True)
-    ls_ab = models.IntegerField(blank=True, null=True)
-    ls_avg = models.DecimalField(max_digits=4, decimal_places=3, blank=True, null=True)
-    ls_obp = models.DecimalField(max_digits=4, decimal_places=3, blank=True, null=True)
-    ls_slg = models.DecimalField(max_digits=4, decimal_places=3, blank=True, null=True)
-    ls_iso = models.DecimalField(max_digits=4, decimal_places=3, blank=True, null=True)
-    ls_k_pct = models.DecimalField(
-        max_digits=4, decimal_places=1, blank=True, null=True
-    )
-    ls_bb_pct = models.DecimalField(
-        max_digits=4, decimal_places=1, blank=True, null=True
-    )
-
-    ls_g = models.IntegerField(blank=True, null=True)
-    ls_gs = models.IntegerField(blank=True, null=True)
-    ls_ip = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True)
-    ls_pk = models.IntegerField(blank=True, null=True)
-    ls_pbb = models.IntegerField(blank=True, null=True)
-    ls_ha = models.IntegerField(blank=True, null=True)
-    ls_hra = models.IntegerField(blank=True, null=True)
-    ls_er = models.IntegerField(blank=True, null=True)
-    ls_k_9 = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
-    ls_hits_9 = models.DecimalField(
-        max_digits=4, decimal_places=2, blank=True, null=True
-    )
-    ls_bb_9 = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
-    ls_hr_9 = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
-    ls_era = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    ls_whip = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    # lineup slots
+    lineup = models.ManyToManyField("Player",through="Membership")
 
     class Meta:
         ordering = ["abbreviation"]
@@ -104,8 +69,10 @@ class Team(BaseModel):
         """
         List of Player models associated with this team.
         """
-        return Player.objects.filter(team=self)
-
+        return Player.objects.filter(team_assigned=self)
+    
+    def get_lineup(self):
+        return "\n".join([p.name for p in self.lineup.all()])
 
 class Player(BaseModel):
 
@@ -135,7 +102,7 @@ class Player(BaseModel):
     mlb_dotcom_url = models.CharField(max_length=255, blank=True, null=True)
 
     # FANTASY
-    team = models.ForeignKey(Team, on_delete=models.SET_NULL, blank=True, null=True)
+    team_assigned = models.ForeignKey(Team, on_delete=models.SET_NULL, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
 
     # STATUS AND SUCH
@@ -219,8 +186,8 @@ class Player(BaseModel):
         """
         Defaults to the denormalized team attribute, if it exists.
         """
-        if self.team:
-            return self.team
+        if self.team_assigned:
+            return self.team_assigned
         return None
 
     def owner(self):
@@ -257,7 +224,7 @@ class Player(BaseModel):
                     self.fg_id = self.fg_url.split("?playerid=")[1].split("&")[0]
 
     def set_owned(self):
-            if self.team == None:
+            if self.team_assigned == None:
                 self.is_owned = False
             else:
                 self.is_owned = True
@@ -266,6 +233,18 @@ class Player(BaseModel):
         if self.team:
             return self.team.abbreviation
         return None
+    
+class Membership(BaseModel):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    date_added = models.DateField()
+
+# VALIDATE LINEUPS
+def lineup_changed(sender,**kwargs):
+    if kwargs['instance'].lineup.count() > 16:
+        raise ValidationError("Too many players on roster (limit 16)")
+    
+m2m_changed.connect(lineup_changed, sender=Team.lineup.through)
     
 class BattingStatLine(BaseModel):
     # id = game_id + player_id
