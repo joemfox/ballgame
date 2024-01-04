@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTable } from './Table'
-import { data } from 'autoprefixer'
+import { PositionSelectDropdown } from './PositionDropdown'
 
 const playerTableColumns = [
     {
@@ -32,10 +32,10 @@ const playerTableColumns = [
                         <DropdownMenuLabel>Player actions</DropdownMenuLabel>
                         <DropdownMenuItem
                             onClick={() => {
-                                axios.post('http://localhost:8000/api/add-player',{id:player.fg_id,team_id:"TST"})
+                                axios.post('http://localhost:8000/api/add-player', { id: player.fg_id, team_id: "TST" })
                                     .then(response => {
                                         console.log(response)
-                                        table.options.meta?.updateRow(row.index,response.data)
+                                        table.options.meta?.updateRow(row.index, response.data)
                                     })
                                     .catch(err => {
                                         console.error(err)
@@ -56,14 +56,14 @@ const playerTableColumns = [
     },
     {
         accessorKey: "team",
-        header: ({column}) => {
+        header: ({ column }) => {
             return (
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-                        Team
-                        <ArrowUpDown className="ml-2 h-4 w-4"/>
-                    </Button>
+                    Team
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
             )
         }
     },
@@ -72,19 +72,19 @@ const playerTableColumns = [
         header: "id"
     },
     {
-        accessorKey:'positions',
-        header:"positions"
+        accessorKey: 'positions',
+        header: "positions"
     },
     {
         accessorKey: "name",
-        header: ({column}) => {
+        header: ({ column }) => {
             return (
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-                        Name
-                        <ArrowUpDown className="ml-2 h-4 w-4"/>
-                    </Button>
+                    Name
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
             )
         }
     },
@@ -96,49 +96,70 @@ const playerTableColumns = [
 
 export default function Players() {
     const [players, setPlayers] = useState([])
-    const [{pageIndex, pageSize}, setPagination] = useState({pageIndex:0,pageSize:100})
+    const [{ pageIndex, pageSize }, setPagination] = useState({ pageIndex: 0, pageSize: 100 })
     const [pageCount, setPageCount] = useState(-1)
 
     const [sorting, setSorting] = React.useState([])
     const [filters, setColumnFilters] = React.useState([])
+    const [positionFilters, setPositionFilters] = useState({
+        "C": false,
+        "1B": false,
+        "2B": false,
+        "SS": false,
+        "3B": false,
+        "LF": false,
+        "CF": false,
+        "RF": false,
+        "SP": false,
+        "RP": false,
+    })
 
     useEffect(() => {
-        axios.get(`http://localhost:8000/api/players`,{
-            params:{
-                page: pageIndex+1,
-                ordering:sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null,
-                search:filters.map(d => d.value).join('')
+        let params = new URLSearchParams()
+        params.append('page', pageIndex + 1)
+        params.append('ordering', sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null)
+        params.append('search', filters.map(d => d.value).join(''))
+        for (let position in positionFilters) {
+            if (positionFilters[position]) {
+                params.append('positions', position)
             }
+        }
+        axios.get(`http://localhost:8000/api/players`, {
+            params: params
         })
             .then(response => {
                 if (response.data.count) {
-                    let count = Math.ceil(response.data.count/response.data.results.length)
+                    let count = Math.ceil(response.data.count / response.data.results.length)
                     setPageCount(count)
-                    setPagination({pageIndex:pageIndex,pageSize:response.data.results.length})
+                    setPagination({ pageIndex: pageIndex, pageSize: response.data.results.length })
                     setPlayers(response.data.results)
                 }
             })
             .catch(err => {
                 console.log(err)
             })
-    }, [pageIndex,sorting,filters])
+    }, [pageIndex, sorting, filters,positionFilters])
 
     return (
         <div className="container mx-auto py-10">
-            <DataTable 
-                columns={playerTableColumns} 
-                data={players.length > 0 ? players : []} 
+            <PositionSelectDropdown 
+                positionFilters={positionFilters}
+                setPositionFilters={setPositionFilters} 
+            />
+            <DataTable
+                columns={playerTableColumns}
+                data={players.length > 0 ? players : []}
                 setData={setPlayers}
-                pageIndex={pageIndex} 
+                pageIndex={pageIndex}
                 pageSize={pageSize}
-                pagination={{pageIndex:pageIndex,pageSize:pageSize}}
+                pagination={{ pageIndex: pageIndex, pageSize: pageSize }}
                 pageCount={pageCount}
                 setPagination={setPagination}
                 sorting={sorting}
                 setSorting={setSorting}
                 filters={filters}
                 setColumnFilters={setColumnFilters}
-                />
+            />
         </div>
     )
 }

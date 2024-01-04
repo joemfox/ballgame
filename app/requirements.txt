@@ -15,7 +15,7 @@ django-extensions
 python-dotenv==0.21.1
 djangorestframework
 markdown
-django-filters
+django-filter
 django-cors-headers
 django-crispy-forms
 crispy-bootstrap4
