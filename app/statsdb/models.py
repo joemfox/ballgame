@@ -254,7 +254,7 @@ class BattingStatLine(BaseModel):
     date = models.DateField(null=False)
 
     # player info
-    player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.SET_NULL)
+    player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.CASCADE)
     last_name = models.CharField(max_length=255,null=True)
     position = models.CharField(max_length=255,null=True)
 
