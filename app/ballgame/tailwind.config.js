@@ -6,14 +6,11 @@ module.exports = {
   content: ["./index.html","src/**/*.{ts,tsx,jsx}", "src/components/**/*.{ts,tsx,jsx}",'./@/**/*.{ts,tsx,jsx}'],
   theme: {
     extend: {
-      fontFamily:{
-        customfontname: ['Segoe UI', 
-                       'Helvetica Neue', 
-                       'Arial',
-                       'sans-serif',
-                       /*...*/ fontFamily.customfontname],
-      },
+      fontFamily: {
+        sans: ['var(--font-geist-sans)'],
+        mono: ['var(--font-geist-mono)'],
       }
-    },
+    }
+  },
   plugins: [require("tailwindcss-animate")],
 }

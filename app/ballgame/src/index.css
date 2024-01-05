@@ -4,6 +4,114 @@
 
 @import "tailwindcss/utilities";
 
+@font-face {
+  font-family: 'Geist';
+  src: url('@/assets/fonts/Geist-Bold.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-Bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist UltraBlack';
+  src: url('@/assets/fonts/Geist-UltraBlack.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-UltraBlack.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('@/assets/fonts/Geist-Light.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('@/assets/fonts/GeistMono-Light.woff2') format('woff2'),
+      url('@/assets/fonts/GeistMono-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('@/assets/fonts/Geist-Medium.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('@/assets/fonts/GeistMono-Light.woff2') format('woff2'),
+      url('@/assets/fonts/GeistMono-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('@/assets/fonts/Geist-Light.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('@/assets/fonts/GeistMono-Regular.woff2') format('woff2'),
+      url('@/assets/fonts/GeistMono-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist UltraBlack';
+  src: url('@/assets/fonts/Geist-UltraBlack.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-UltraBlack.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('@/assets/fonts/Geist-Medium.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('@/assets/fonts/Geist-Bold.woff2') format('woff2'),
+      url('@/assets/fonts/Geist-Bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('@/assets/fonts/GeistMono-Regular.woff2') format('woff2'),
+      url('@/assets/fonts/GeistMono-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
     :root {
       --background: 0 0% 100%;
@@ -52,7 +160,7 @@
   }
   
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Geist';
   line-height: 1.5;
   font-weight: 400;
 
@@ -64,6 +172,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.geist-mono{
+  font-family:'Geist Mono';
+}
+
+.geist-ultrablack{
+  font-family:'Geist Ultrablack';
 }
 
 a {
