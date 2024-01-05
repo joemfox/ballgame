@@ -12,21 +12,11 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ItemTypes } from '../App'
-import { useDrag } from 'react-dnd'
 
 
 export function DataTable({
     columns, data, setData, pagination, setPagination, pageCount, sorting, setSorting, filters, setColumnFilters
 }) {
-
-    const [{isDragging}, drag] = useDrag(() =>({
-        type: ItemTypes.PLAYER,
-        collect: monitor => ({
-            isDragging: !!monitor.isDragging()
-        })
-    }))
-
     const table = useReactTable({
         data,
         columns,
@@ -111,10 +101,10 @@ export function DataTable({
                     <TableBody>
                         {table.getRowModel().rows?.length ? (table.getRowModel().rows.map((row) => (
                             <TableRow
-                                ref={drag}
-                                key={row.id}
+                                draggable={true}
+                                key={row.original.fg_id}
+                                dragData={{id:row.original.fg_id, positions:row.original.positions} }
                                 data-state={row.getIsSelected() && 'selected'}
-                                className={`${isDragging ? 'opacity-30' : ''}`}
                                 >
                                 {row.getVisibleCells().map((cell) => (
                                     <TableCell key={cell.id}>

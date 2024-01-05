@@ -1,6 +1,8 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { ItemTypes } from '@/App'
+import { useDrag } from 'react-dnd'
 
 const Table = React.forwardRef(({ className, ...props }, ref) => (
   <div className="relative w-full overflow-auto">
@@ -33,15 +35,24 @@ const TableFooter = React.forwardRef(({ className, ...props }, ref) => (
 ))
 TableFooter.displayName = "TableFooter"
 
-const TableRow = React.forwardRef(({ className, ...props }, ref) => (
+const TableRow = React.forwardRef(({ className, dragData, dragTypes, ...props }, ref) => {
+  const [{isDragging}, drag, dragPreview] = useDrag(() =>({
+    type: ItemTypes.PLAYER,
+    item:{...dragData},
+    collect: monitor => ({
+        isDragging: !!monitor.isDragging()
+    })
+}))
+  return (
   <tr
-    ref={ref}
+    ref={props.draggable ? drag : ref}
     className={cn(
       "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      `${isDragging ? 'opacity-30' : ''}`,
       className
     )}
     {...props} />
-))
+)})
 TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef(({ className, ...props }, ref) => (

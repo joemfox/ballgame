@@ -24,7 +24,7 @@ urlpatterns = [
     path('', include(router.urls)),
     re_path(r'^api/players/$',views.PlayerList.as_view()),
     re_path(r'^api/teams/$',views.TeamList.as_view()),
-    re_path(r'^api/players/([0-9])$',views.player_detail),
+    re_path(r'^api/player/$',views.PlayerDetail.as_view({'get':'retrieve'})),
     path('api/add-player',views.add_player_to_team),
     path('admin/',admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),

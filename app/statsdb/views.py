@@ -1,9 +1,10 @@
 import datetime
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework import status, permissions, generics, filters
+from rest_framework import status, permissions, generics, filters, viewsets
 from django_filters import rest_framework as django_filters
 import sys
 
@@ -37,11 +38,25 @@ class TeamList(generics.ListAPIView):
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
 
+@permission_classes((permissions.AllowAny,))
+class PlayerDetail(viewsets.ModelViewSet):
+    queryset = Player.objects.all()
+
+    def retrieve(self, request):
+        try:
+            fg_id = request.query_params['id']
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        player = get_object_or_404(self.queryset, fg_id=fg_id)
+        serializer = PlayerSerializer(player)
+        return Response(serializer.data)
+
 @api_view(['GET'])
 @permission_classes((permissions.AllowAny,))
-def player_detail(request,id):
+def player_detail(request):
+    print(request.data,file=sys.stderr)
     try:
-        player = Player.objects.get(fg_id=id)
+        player = Player.objects.get(fg_id=request.data['id'])
     except Player.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
