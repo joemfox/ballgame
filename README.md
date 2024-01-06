@@ -2,6 +2,13 @@
 
 This is a Docker project. To get started, run `docker compose up --d` from the project root.
 
+*jan. 4*
+- created lineup card on frontend with drag and drop from player list
+- created Lineup model instead of many-to-many team relationship
+- added API endpoint for get/post lineups
+- next: hook up frontend lineup card to API endpoint so we can use it
+- after: user auth
+
 *jan. 3*
 - created Membership intermediate class for adding player to team
 - added many-to-many relationship to Team for use as a lineup
