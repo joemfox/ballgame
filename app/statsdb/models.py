@@ -3,7 +3,7 @@ from dateutil.relativedelta import *
 
 from django.db.models.signals import m2m_changed
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
 from nameparser import HumanName
@@ -32,6 +32,113 @@ class Owner(BaseModel):
 
     def team(self):
         return Team.objects.get(owner_obj=self)
+
+class Lineup(BaseModel):
+    lineup_team = models.ForeignKey("Team",null=False,on_delete=models.CASCADE)
+    lineup_C = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_C")
+    lineup_1B = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_1B")
+    lineup_2B = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_2B")
+    lineup_SS = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_SS")
+    lineup_3B = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_3B")
+    lineup_LF = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_LF")
+    lineup_CF = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_CF")
+    lineup_RF = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_RF")
+    lineup_SP1 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_SP1")
+    lineup_SP2 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_SP2")
+    lineup_SP3 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_SP3")
+    lineup_SP4 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_SP4")
+    lineup_SP5 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_SP5")
+    lineup_RP1 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_RP1")
+    lineup_RP2 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_RP2")
+    lineup_RP3 = models.ForeignKey("Player",null=True, on_delete=models.SET_NULL, related_name="lineup_RP3")
+
+    def get_C(self):
+        try:
+            return self.lineup_C__name
+        except:
+            return 'None'
+    def get_1B(self):
+        try:
+            return self.lineup_1B__name
+        except:
+            return 'None'
+    def get_2B(self):
+        try:
+            return self.lineup_2B__name
+        except:
+            return 'None'
+    def get_SS(self):
+        try:
+            return self.lineup_SS__name
+        except:
+            return 'None'
+    def get_3B(self):
+        try:
+            return self.lineup_3B__name
+        except:
+            return 'None'
+    def get_LF(self):
+        try:
+            return self.lineup_LF__name
+        except:
+            return 'None'
+    def get_CF(self):
+        try:
+            return self.lineup_CF__name
+        except:
+            return 'None'
+    def get_RF(self):
+        try:
+            return self.lineup_RF__name
+        except:
+            return 'None'
+    def get_SP1(self):
+        try:
+            return self.lineup_SP1__name
+        except:
+            return 'None'
+    def get_SP2(self):
+        try:
+            return self.lineup_SP2__name
+        except:
+            return 'None'
+    def get_SP3(self):
+        try:
+            return self.lineup_SP3__name
+        except:
+            return 'None'
+    def get_SP4(self):
+        try:
+            return self.lineup_SP4__name
+        except:
+            return 'None'
+    def get_SP5(self):
+        try:
+            return self.lineup_SP5__name
+        except:
+            return 'None'
+    def get_RP1(self):
+        try:
+            return self.lineup_RP1__name
+        except:
+            return 'None'
+    def get_RP2(self):
+        try:
+            return self.lineup_RP2__name
+        except:
+            return 'None'
+    def get_RP3(self):
+        try:
+            return self.lineup_RP3__name
+        except:
+            return 'None'
+
+
+    def __unicode__(self):
+        try:
+            return "C: " + self.get_C() + "1B: " + self.get_1B() + "2B: " + self.get_2B() + "SS: " + self.get_SS() + "3B: " + self.get_3B() + "LF: " + self.get_LF() + "CF: " + self.get_CF() + "RF: " + self.get_RF() + "SP1: " + self.get_SP1() + "SP2: " + self.get_SP2() + "SP3: " + self.get_SP3() + "SP4: " + self.get_SP4() + "SP5: " + self.get_SP5() + "RP1: " + self.get_RP1() + "RP2: " + self.get_RP2() + "RP3: " + self.get_RP3()
+        except:
+            return 'lineup unset'
     
 class Team(BaseModel):
     city = models.CharField(max_length=255)
@@ -46,7 +153,7 @@ class Team(BaseModel):
     championships = ArrayField(models.CharField(max_length=4), blank=True, null=True)
 
     # lineup slots
-    lineup = models.ManyToManyField("Player",through="Membership")
+    team_lineup = models.ForeignKey("Lineup",blank=True,null=True,on_delete=models.SET_NULL)
 
     class Meta:
         ordering = ["abbreviation"]
@@ -72,8 +179,16 @@ class Team(BaseModel):
         return Player.objects.filter(team_assigned=self)
     
     def get_lineup(self):
-        return "\n".join([p.name for p in self.lineup.all()])
-
+        return Lineup.objects.filter(lineup_team=self).first()
+    
+    # create new lineup when team is saved if it doesn't have one yet
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if len(Lineup.objects.filter(lineup_team=self)) == 0:
+            lineup, _ = Lineup.objects.get_or_create(lineup_team=self)
+            self.team_lineup = lineup
+        super(Team,self).save(*args,**kwargs)
+    
 class Player(BaseModel):
 
     name = models.CharField(max_length=255)
@@ -93,7 +208,7 @@ class Player(BaseModel):
     mlbam_id = models.CharField(max_length=255, blank=True, null=True)
     mlb_dotcom = models.CharField(max_length=255, blank=True, null=True)
     bref_id = models.CharField(max_length=255, blank=True, null=True)
-    fg_id = models.CharField(max_length=255, blank=True, null=True)
+    fg_id = models.CharField(max_length=255, blank=True, null=False,primary_key=True)
 
     # LINKS TO THE WEB
     bref_url = models.CharField(max_length=255, blank=True, null=True)
@@ -238,13 +353,6 @@ class Membership(BaseModel):
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     date_added = models.DateField()
-
-# VALIDATE LINEUPS 
-def lineup_changed(sender,**kwargs):
-    if kwargs['instance'].lineup.count() > 16:
-        raise ValidationError("Too many players on roster (limit 16)")
-    
-m2m_changed.connect(lineup_changed, sender=Team.lineup.through)
     
 class BattingStatLine(BaseModel):
     # id = game_id + player_id

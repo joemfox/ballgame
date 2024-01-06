@@ -105,9 +105,10 @@ export function DataTable({
                                 key={row.original.fg_id}
                                 dragData={{id:row.original.fg_id, positions:row.original.positions} }
                                 data-state={row.getIsSelected() && 'selected'}
+                                className="h-4"
                                 >
                                 {row.getVisibleCells().map((cell) => (
-                                    <TableCell key={cell.id}>
+                                    <TableCell key={cell.id} className="h-4 pt-0 pb-0">
                                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                     </TableCell>
                                 ))}

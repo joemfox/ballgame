@@ -14,85 +14,7 @@ import {
 import { DataTable } from './Table'
 import { PositionSelectDropdown } from './PositionDropdown'
 
-const playerTableColumns = [
-    {
-        id: "actions",
-        cell: ({ row, column, table }) => {
-            const player = row.original
 
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Actions</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                        <DropdownMenuLabel>Player actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => {
-                                axios.post('http://localhost:8000/api/add-player', { id: player.fg_id, team_id: "TST" })
-                                    .then(response => {
-                                        console.log(response)
-                                        table.options.meta?.updateRow(row.index, response.data)
-                                    })
-                                    .catch(err => {
-                                        console.error(err)
-                                    })
-                            }}
-                        >
-                            Add to team
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>View player</DropdownMenuItem>
-                        <DropdownMenuItem>Drop player</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-            )
-        }
-
-    },
-    {
-        accessorKey: "team_assigned",
-        header: ({ column }) => {
-            return (
-                <Button
-                    variant="ghost"
-                    onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-                    Team
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-            )
-        }
-    },
-    {
-        accessorKey: "fg_id",
-        header: "id"
-    },
-    {
-        accessorKey: 'positions',
-        header: "positions"
-    },
-    {
-        accessorKey: "name",
-        header: ({ column }) => {
-            return (
-                <Button
-                    variant="ghost"
-                    onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-                    Name
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-            )
-        }
-    },
-    {
-        accessorKey: 'stats',
-        header: "Stats"
-    }
-]
 
 export default function Players() {
     const [players, setPlayers] = useState([])
@@ -113,6 +35,90 @@ export default function Players() {
         "SP": false,
         "RP": false,
     })
+
+    const playerTableColumns = [
+        {
+            id: "actions",
+            cell: ({ row, column, table }) => {
+                const player = row.original
+    
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Actions</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuLabel>Player actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    axios.post('http://localhost:8000/api/add-player', { id: player.fg_id, team_id: "TST" })
+                                        .then(response => {
+                                            console.log(response)
+                                            table.options.meta?.updateRow(row.index, response.data)
+                                        })
+                                        .catch(err => {
+                                            console.error(err)
+                                        })
+                                }}
+                            >
+                                Add to team
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>View player</DropdownMenuItem>
+                            <DropdownMenuItem>Drop player</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+    
+                )
+            }
+    
+        },
+        {
+            accessorKey: "team_assigned",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+                        Team
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            }
+        },
+        // {
+        //     accessorKey: "fg_id",
+        //     header: "id"
+        // },
+        {
+            accessorKey: 'positions',
+            header: "positions",
+            cell: ({row}) => {
+                const positions = row.original.positions.map((d,i) => (<><span className={`${positionFilters[d] ? 'bg-slate-400' : ''}`}>{d}</span><span>{i+1 < row.original.positions.length ? ', ' : ''}</span></>))
+                return <div key={row.id} className={`text-left`}>{positions}</div>
+            }
+        },
+        {
+            accessorKey: "name",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+                        Name
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            }
+        },
+        {
+            accessorKey: 'stats',
+            header: "Stats"
+        }
+    ]
 
     useEffect(() => {
         let params = new URLSearchParams()

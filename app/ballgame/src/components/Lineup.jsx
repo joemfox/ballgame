@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useDrop, useDragDropManager } from 'react-dnd'
 import { ItemTypes } from '@/App'
@@ -8,8 +8,8 @@ const POSITIONS = ["C", "1B", "2B", "SS", "3B", "LF", "CF", "RF", "SP", "SP", "S
 function PlayerSlot({forwardRef, player, position, highlighted, ...props }) {
     return (
         <div ref={forwardRef} className={`${!highlighted ? 'opacity-50' : ''} rounded-md border p-4 pl-2 m-2 grid grid-cols-3 grid-rows-2`}>
-            <div className="col-span-1 row-span-2 text-5xl text-center align-middle font-bold border-r-2 mr-2 pt-1 border-slate-900">{position}</div>
-            <p className="col-span-2 font-normal text-xl">{player.name}</p>
+            <div className="col-span-1 row-span-2 text-5xl text-center align-middle font-bold border-r-2 mr-2 pt-1 border-slate-900 text-slate-600">{position}</div>
+            <p className="col-span-2 font-light text-2xl">{player.name}</p>
             <div className="col-span-2 geist-mono text-sm">{JSON.stringify(player.stats)}</div>
         </div>)
 }
@@ -48,10 +48,26 @@ function PlayerSlotWrapper({ position, ...props }) {
 }
 
 export default function LineupCard({ team }) {
+    useEffect(() => {
+        // axios.get('http://localhost:8000/api/lineup',{
+        //     params:{
+        //         team:'TST'
+        //     }
+        // }).then(response => {
+        //     console.log(response)
+        // })
+
+        axios.post('http://localhost:8000/api/lineup/',{
+            team:'TST',
+            lineup_C:13755
+        }).then(response => {
+            console.log(response)
+        })
+    },[])
     return (
         <div>
-            {POSITIONS.map(playerSlot => (
-                <PlayerSlotWrapper key={playerSlot} position={playerSlot} />
+            {POSITIONS.map((playerSlot,i) => (
+                <PlayerSlotWrapper key={`${playerSlot}-${i}`} position={playerSlot} />
             ))}
         </div>
     )
