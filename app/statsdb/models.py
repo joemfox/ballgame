@@ -1,3 +1,4 @@
+import sys
 import datetime
 from dateutil.relativedelta import *
 
@@ -133,12 +134,14 @@ class Lineup(BaseModel):
         except:
             return 'None'
 
+    def get_team(self):
+        try:
+            return self.lineup_team
+        except:
+            return None
 
     def __unicode__(self):
-        try:
-            return "C: " + self.get_C() + "1B: " + self.get_1B() + "2B: " + self.get_2B() + "SS: " + self.get_SS() + "3B: " + self.get_3B() + "LF: " + self.get_LF() + "CF: " + self.get_CF() + "RF: " + self.get_RF() + "SP1: " + self.get_SP1() + "SP2: " + self.get_SP2() + "SP3: " + self.get_SP3() + "SP4: " + self.get_SP4() + "SP5: " + self.get_SP5() + "RP1: " + self.get_RP1() + "RP2: " + self.get_RP2() + "RP3: " + self.get_RP3()
-        except:
-            return 'lineup unset'
+        return f'${self.get_team()}-lineup'
     
 class Team(BaseModel):
     city = models.CharField(max_length=255)
@@ -177,9 +180,6 @@ class Team(BaseModel):
         List of Player models associated with this team.
         """
         return Player.objects.filter(team_assigned=self)
-    
-    def get_lineup(self):
-        return Lineup.objects.filter(lineup_team=self).first()
     
     # create new lineup when team is saved if it doesn't have one yet
     @transaction.atomic

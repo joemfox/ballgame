@@ -26,13 +26,14 @@ class TeamLineupSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='abbreviation'
     )
+    position_fields = ["lineup_C", "lineup_1B", "lineup_2B", "lineup_SS", "lineup_3B", "lineup_LF", "lineup_CF", "lineup_RF", "lineup_SP1", "lineup_SP2", "lineup_SP3", "lineup_SP4", "lineup_SP5", "lineup_RP1", "lineup_RP2", "lineup_RP3"]
     class Meta:
         model = Lineup
-        fields = ["lineup_team","lineup_C", "lineup_1B", "lineup_2B", "lineup_SS", "lineup_3B", "lineup_LF", "lineup_CF", "lineup_RF", "lineup_SP1", "lineup_SP2", "lineup_SP3", "lineup_SP4", "lineup_SP5", "lineup_RP1", "lineup_RP2", "lineup_RP3"]
+        exclude = ('active','created','last_modified')
     
     def update(self,instance,validated_data):
         print(validated_data,file=sys.stderr)
-        if validated_data['lineup_C']:
-            setattr(instance,'lineup_C',validated_data['lineup_C'])
+        for pos in validated_data:
+            setattr(instance,pos,validated_data[pos])
         instance.save()
         return instance

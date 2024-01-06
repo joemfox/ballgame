@@ -56,15 +56,18 @@ class PlayerDetail(viewsets.ModelViewSet):
 def lineup_detail(request):
     serializer_class = TeamLineupSerializer
 
-    queryset = Team.objects.all()
+    queryset = Lineup.objects.all()
     try:
-        team_id = request.query_params['team']
-        # print(team_id,file=sys.stderr)
+        try:
+            team_id = request.query_params['team']
+        except:
+            team_id = request.data['team']
+        print(team_id,file=sys.stderr)
+        team = Team.objects.all().filter(abbreviation=team_id).first()
     except:
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-    lineup = queryset.filter(abbreviation=team_id).first().get_lineup()
-    print(lineup,file=sys.stderr)
+    lineup = queryset.filter(lineup_team=team).first()
 
     if request.method == 'GET':
         serializer = TeamLineupSerializer(lineup)
@@ -72,6 +75,7 @@ def lineup_detail(request):
     
     elif request.method == 'POST':
         new_lineup_data = request.data
+        print(new_lineup_data,file=sys.stderr)
         serializer = TeamLineupSerializer(lineup, data=new_lineup_data,partial=True)
         if serializer.is_valid():
             serializer.save()

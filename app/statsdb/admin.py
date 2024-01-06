@@ -18,11 +18,8 @@ class PlayerAdmin(admin.ModelAdmin):
     search_fields = ['name','mlbam_id']
     inlines = [BattingStatLineInline,PitchingStatLineInline]
 
-class TeamAdmin(admin.ModelAdmin):
-    readonly_fields = ['get_lineup']
-
 admin.site.register(Owner)
-admin.site.register(Team, TeamAdmin)
+admin.site.register(Team)
 admin.site.register(Player, PlayerAdmin)
 admin.site.register(BattingStatLine, BattingStatlineAdmin)
 admin.site.register(PitchingStatLine,PitchingStatlineAdmin)
