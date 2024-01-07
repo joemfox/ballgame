@@ -4,7 +4,24 @@ import { useDrop, useDragDropManager } from 'react-dnd'
 import { ItemTypes } from '@/App'
 import { Button } from "@/components/ui/button"
 
-const POSITIONS = ["C", "1B", "2B", "SS", "3B", "LF", "CF", "RF", "SP", "SP", "SP", "SP", "SP", "RP","RP","RP"]
+const DB_POSITIONS = {
+lineup_1B:"1B",
+lineup_2B:"2B",
+lineup_3B:"3B",
+lineup_C:"C",
+lineup_CF:"CF",
+lineup_LF:"LF",
+lineup_RF:"RF",
+lineup_RP1:"RP",
+lineup_RP2:"RP",
+lineup_RP3:"RP",
+lineup_SP1:"SP",
+lineup_SP2:"SP",
+lineup_SP3:"SP",
+lineup_SP4:"SP",
+lineup_SP5:"SP",
+lineup_SS:"SS",
+ }
 
 function PlayerSlot({ forwardRef, playerInfo, position, highlighted, ...props }) {
     return (
@@ -97,16 +114,18 @@ export default function LineupCard({ team }) {
     }, [])
 
     useEffect(() => {
+        console.log('server: ', serverLineup)
         let newLineup = {}
         Object.keys(serverLineup).filter(d => d !== 'lineup_team').map(pos => {
             newLineup[pos] = serverLineup[pos]
         })
+        console.log('display: ',newLineup)
         setDisplayLineup(newLineup)
     }, [serverLineup])
     return (
         <div>
             {Object.keys(displayLineup).map((playerSlot, i) => (
-                <PlayerSlotWrapper key={`${playerSlot}-${i}`} position={POSITIONS[i]} db_position={playerSlot} player={displayLineup[playerSlot]} setDisplayLineup={setDisplayLineup} />
+                <PlayerSlotWrapper key={`${playerSlot}-${i}`} position={DB_POSITIONS[playerSlot]} db_position={playerSlot} player={displayLineup[playerSlot]} setDisplayLineup={setDisplayLineup} />
             ))}
             <Button onClick={saveLineup} >Save</Button>
         </div>

@@ -29,7 +29,7 @@ class TeamLineupSerializer(serializers.ModelSerializer):
     position_fields = ["lineup_C", "lineup_1B", "lineup_2B", "lineup_SS", "lineup_3B", "lineup_LF", "lineup_CF", "lineup_RF", "lineup_SP1", "lineup_SP2", "lineup_SP3", "lineup_SP4", "lineup_SP5", "lineup_RP1", "lineup_RP2", "lineup_RP3"]
     class Meta:
         model = Lineup
-        exclude = ('active','created','last_modified')
+        exclude = ('active','created','last_modified','id')
     
     def update(self,instance,validated_data):
         print(validated_data,file=sys.stderr)
