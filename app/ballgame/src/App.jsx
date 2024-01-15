@@ -16,7 +16,7 @@ function App() {
     <DndProvider backend={HTML5Backend}>
     <ResizablePanelGroup className="border  max-h-screen" direction="horizontal">
       <ResizablePanel defaultSize={40}>
-        <ScrollArea className="h-full">
+        <ScrollArea className="relative h-full">
         <LineupCard team={"TST"}/>
         </ScrollArea>
         </ResizablePanel>

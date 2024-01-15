@@ -25,10 +25,10 @@ lineup_SS:"SS",
 
 function PlayerSlot({ forwardRef, playerInfo, position, highlighted, ...props }) {
     return (
-        <div ref={forwardRef} className={`${!highlighted ? 'opacity-50' : ''} rounded-md border p-4 pl-2 m-2 grid grid-cols-3 grid-rows-2`}>
-            <div className="col-span-1 row-span-2 text-5xl text-center align-middle font-bold border-r-2 mr-2 pt-1 border-slate-900 text-slate-600">{position}</div>
-            <p className="col-span-2 font-light text-2xl">{playerInfo.name}</p>
-            <div className="col-span-2 geist-mono text-sm">{JSON.stringify(playerInfo.stats)}</div>
+        <div ref={forwardRef} className={`${!highlighted ? 'opacity-50' : ''} rounded-md border p-4 pl-2 m-2 flex flex-row flex-wrap w-full`}>
+            <div className="basis-10 shrink-0 grow-0 text-2xl text-center align-middle font-bold border-r-2 mr-2 pt-1 border-slate-900 text-slate-600">{position}</div>
+            <p className=" basis-11/12 shrink-0 font-light text-xl text-left align-middle">{playerInfo.name}</p>
+            <div className="basis-full geist-mono text-sm">{JSON.stringify(playerInfo.stats)}</div>
         </div>)
 }
 
@@ -123,7 +123,7 @@ export default function LineupCard({ team }) {
         setDisplayLineup(newLineup)
     }, [serverLineup])
     return (
-        <div>
+        <div className="relative">
             {Object.keys(displayLineup).map((playerSlot, i) => (
                 <PlayerSlotWrapper key={`${playerSlot}-${i}`} position={DB_POSITIONS[playerSlot]} db_position={playerSlot} player={displayLineup[playerSlot]} setDisplayLineup={setDisplayLineup} />
             ))}

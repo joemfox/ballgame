@@ -53,7 +53,6 @@ export default function Players() {
                         <DropdownMenuContent align="start">
                             <DropdownMenuLabel>Player actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                                key="add"
                                 onClick={() => {
                                     axios.post('http://localhost:8000/api/add-player', { id: player.fg_id, team_id: "TST" })
                                         .then(response => {
@@ -68,8 +67,8 @@ export default function Players() {
                                 Add to team
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem key="view">View player</DropdownMenuItem>
-                            <DropdownMenuItem key="drop">Drop player</DropdownMenuItem>
+                            <DropdownMenuItem>View player</DropdownMenuItem>
+                            <DropdownMenuItem>Drop player</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
     
