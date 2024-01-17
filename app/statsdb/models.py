@@ -5,10 +5,11 @@ from dateutil.relativedelta import *
 from django.db.models.signals import m2m_changed
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import F, Func
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
 from nameparser import HumanName
-from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES
+from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, POINT_VALUES_HIT
 
 class BaseModel(models.Model):
     active = models.BooleanField(default=True)
@@ -366,6 +367,7 @@ class BattingStatLine(BaseModel):
 
     # player info
     player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.CASCADE)
+    player_mlbam_id = models.CharField(max_length=255,null=False)
     last_name = models.CharField(max_length=255,null=True)
     position = models.CharField(max_length=255,null=True)
 
@@ -379,6 +381,7 @@ class BattingStatLine(BaseModel):
     ab = models.IntegerField(blank=True,null=True)
     r = models.IntegerField(blank=True,null=True)
     h = models.IntegerField(blank=True,null=True)
+    outs = models.IntegerField(blank=True,null=True)
     doubles = models.IntegerField(blank=True,null=True)
     triples = models.IntegerField(blank=True,null=True)
     hr = models.IntegerField(blank=True,null=True)
@@ -391,8 +394,37 @@ class BattingStatLine(BaseModel):
     # game stats (from elsewhere)
     cs = models.IntegerField(blank=True,null=True)
     e = models.IntegerField(blank=True,null=True)
+    k_looking = models.IntegerField(blank=True,null=True)
     # runners in scoring position left on base with 2 outs
-    assblood = models.IntegerField(blank=True,null=True)
+    rl2o = models.IntegerField(blank=True,null=True)
+    cycle = models.BooleanField(default=False)
+    gidp = models.IntegerField(blank=True,null=True)
+    po = models.IntegerField(blank=True,null=True)
+    outfield_assists = models.IntegerField(blank=True,null=True)
+
+    # fantasy score categories
+    FAN_outs = models.GeneratedField(
+        expression = Func(F('outs'),function='fan_outs'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_hits = models.GeneratedField(
+        expression = Func(F('h'),function='fan_hits'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_bb = models.GeneratedField(
+        expression = F('bb') * POINT_VALUES_HIT['BB'],
+        output_field = models.IntegerField(),
+        db_persist=True
+    )
+
+    FAN_triples = models.GeneratedField(
+        expression = F('triples') * POINT_VALUES_HIT['triples'],
+        output_field = models.IntegerField(),
+        db_persist=True
+    )
 
     def __unicode__(self):
         if self.player:

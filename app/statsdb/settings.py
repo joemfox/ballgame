@@ -60,6 +60,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100
 }
@@ -254,3 +258,43 @@ POSITIONS_CHOICES = (
     (CENTERFIELD, "Center field"),
     (RIGHTFIELD, "Right field"),
 )
+
+POINT_VALUES_HIT = {
+    "outs_bp_1":4,  # breakpoint
+    "outs_max_1": 0.75, # lower value
+    "outs_min_1":1, # higher value
+    "BB":-1,
+    'triples':-3,
+    'hits_bp_1': 1,
+    'hits_bp_2': 2,
+    'hits_max_1':-1,
+    'hits_max_2':-1.25,
+    'hits_min_2':-1.5,
+    'cycle':-40,
+    'doubles':-2,
+    'outfield_assists':-1,
+    'caught_stealing':2,
+    'errors':2,
+    'gidp':2,
+    'hr_bp_1':1,
+    'hr_bp_2':2,
+    'hr_bp_3':3,
+    'hr_bp_4':4,
+    'hr_max_1':-3,
+    'hr_max_2':-4,
+    'hr_max_3':-5,
+    'hr_max_4':-100,
+    'hr_min_4':-1000,
+    'r':-1,
+    'lob':0.5,
+    'po':4,
+    'rl20':2,
+    'rbi':-1,
+    'k_looking':0.5,
+    'k_bp_1':2,
+    'k_bp_2':3,
+    'k_max_1':0.5,
+    'k_max_2':1,
+    'k_min_2':4,
+    'sb':-3,
+}
