@@ -2,6 +2,14 @@
 
 This is a Docker project. To get started, run `docker compose up --d` from the project root.
 
+*jan. 16*
+took a long break
+- began implementing scoring calculations in linescore objects using generated fields with SQL functions
+- at some point finished lineup saving/retrieving
+- todo: user auth + teams
+- next: finish implementing scoring calculations
+- then: figure out how to sum scores for statline, team/day, team/season, player/season
+
 *jan. 5*
 - created lineup card on frontend with drag and drop from player list
 - created Lineup model instead of many-to-many team relationship
