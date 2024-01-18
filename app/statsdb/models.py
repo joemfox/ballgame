@@ -414,15 +414,106 @@ class BattingStatLine(BaseModel):
         output_field = models.FloatField(),
         db_persist=True
     )
+
+    FAN_hr = models.GeneratedField(
+        expression = Func(F('hr'),function='fan_hr'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_k = models.GeneratedField(
+        expression = Func(F('k'),function='fan_k'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
     FAN_bb = models.GeneratedField(
         expression = F('bb') * POINT_VALUES_HIT['BB'],
-        output_field = models.IntegerField(),
+        output_field = models.FloatField(),
         db_persist=True
     )
 
     FAN_triples = models.GeneratedField(
         expression = F('triples') * POINT_VALUES_HIT['triples'],
-        output_field = models.IntegerField(),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_cycle = models.GeneratedField(
+        expression = Func(F('cycle'), function='fan_cycle'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_doubles = models.GeneratedField(
+        expression = F('doubles') * POINT_VALUES_HIT['doubles'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_outfield_assists = models.GeneratedField(
+        expression = F('outfield_assists') * POINT_VALUES_HIT['outfield_assists'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_cs = models.GeneratedField(
+        expression = F('cs') * POINT_VALUES_HIT['cs'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_e = models.GeneratedField(
+        expression = F('e') * POINT_VALUES_HIT['e'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_gidp = models.GeneratedField(
+        expression = F('gidp') * POINT_VALUES_HIT['gidp'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_r = models.GeneratedField(
+        expression = F('r') * POINT_VALUES_HIT['r'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_lob = models.GeneratedField(
+        expression = F('lob') * POINT_VALUES_HIT['lob'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_po = models.GeneratedField(
+        expression = F('po') * POINT_VALUES_HIT['po'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_rl2o = models.GeneratedField(
+        expression = F('rl2o') * POINT_VALUES_HIT['rl2o'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_rbi = models.GeneratedField(
+        expression = F('rbi') * POINT_VALUES_HIT['rbi'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_k_looking = models.GeneratedField(
+        expression = F('k_looking') * POINT_VALUES_HIT['k_looking'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_sb = models.GeneratedField(
+        expression = F('sb') * POINT_VALUES_HIT['sb'],
+        output_field = models.FloatField(),
         db_persist=True
     )
 
