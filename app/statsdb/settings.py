@@ -259,6 +259,28 @@ POSITIONS_CHOICES = (
     (RIGHTFIELD, "Right field"),
 )
 
+FAN_CATEGORIES_HIT = [
+    "outs",
+    "bb",
+    "triples",
+    "hits",
+    "cycle",
+    "doubles",
+    "outfield_assists",
+    "cs",
+    "e",
+    "gidp",
+    "hr",
+    "r",
+    "lob",
+    "po",
+    "rl2o",
+    "rbi",
+    "k_looking",
+    "k",
+    "sb"
+]
+
 POINT_VALUES_HIT = {
     "outs_bp_1":4,  # breakpoint
     "outs_max_1": 0.75, # lower value

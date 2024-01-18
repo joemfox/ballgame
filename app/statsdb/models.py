@@ -9,7 +9,7 @@ from django.db.models import F, Func
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
 from nameparser import HumanName
-from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, POINT_VALUES_HIT
+from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, FAN_CATEGORIES_HIT, POINT_VALUES_HIT
 
 class BaseModel(models.Model):
     active = models.BooleanField(default=True)
@@ -516,6 +516,8 @@ class BattingStatLine(BaseModel):
         output_field = models.FloatField(),
         db_persist=True
     )
+    
+    FAN_total = models.FloatField(null=False,default=0.0,blank=False)
 
     def __unicode__(self):
         if self.player:
@@ -528,6 +530,16 @@ class BattingStatLine(BaseModel):
         if self.player:
             return self.player.name
         return None
+
+    # when row is updated, fetch automatically calculated fields (fantasy scores)
+    # then save the sum as FAN_total
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        super(BattingStatLine,self).save(*args,**kwargs)
+        super(BattingStatLine,self).refresh_from_db(*args,**kwargs)
+        fan_total = sum([getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
+        setattr(self,'FAN_total', fan_total)
+        super(BattingStatLine,self).save(*args,**kwargs)
 
 class PitchingStatLine(BaseModel):
     # id = game_id + player_id
