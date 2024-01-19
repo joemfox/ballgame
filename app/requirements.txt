@@ -19,3 +19,4 @@ django-filter
 django-cors-headers
 django-crispy-forms
 crispy-bootstrap4
+tqdm

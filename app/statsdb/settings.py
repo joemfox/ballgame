@@ -259,6 +259,8 @@ POSITIONS_CHOICES = (
     (RIGHTFIELD, "Right field"),
 )
 
+# all categories should be listed here
+# and have point assignments in the object below
 FAN_CATEGORIES_HIT = [
     "outs",
     "bb",

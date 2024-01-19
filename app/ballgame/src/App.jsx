@@ -1,48 +1,40 @@
-import { useState } from 'react'
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-
-import Players from './components/Players.jsx'
-import LineupCard from './components/Lineup.jsx'
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import Team from './pages/Team.jsx'
+import PlayerDetail from './pages/PlayerDetail.jsx'
 
 function App() {
   return (
-    <DndProvider backend={HTML5Backend}>
-    <ResizablePanelGroup className="border  max-h-screen" direction="horizontal">
-      <ResizablePanel defaultSize={40}>
-        <ScrollArea className="relative h-full">
-        <LineupCard team={"TST"}/>
-        </ScrollArea>
-        </ResizablePanel>
-      <ResizableHandle withHandle/>
-      <ResizablePanel>
-        <ScrollArea className="h-full">
-        <Players/>
-        </ScrollArea>
-        </ResizablePanel>
-    </ResizablePanelGroup>
-    </DndProvider>
+    <Router>
+      <header>
+        {/* <Navbar /> */}
+      </header>
+      <main>
+        <Routes>
+            <Route path="/" element={<Team/>}/>
+            <Route path="/team/:teamid" element={<Team />} />
+            <Route path="/player/:playerid" element={<PlayerDetail />} />
+        </Routes>
+      </main>
+      <footer>
+      </footer>
+    </Router>
   )
 }
 
-export const ItemTypes = {
-  PLAYER: 'Player',
-  'C':'C',
-  '1B':'1B',
-  '2B':'2B',
-  '3B':'3B',
-  'SS':'SS',
-  'LF':'LF',
-  'CF':'CF',
-  'RF':'RF',
-  'SP':'SP',
-  'RP':'RP'
-}
-
 export default App
+
+
+export const ItemTypes = {
+    PLAYER: 'Player',
+    'C':'C',
+    '1B':'1B',
+    '2B':'2B',
+    '3B':'3B',
+    'SS':'SS',
+    'LF':'LF',
+    'CF':'CF',
+    'RF':'RF',
+    'SP':'SP',
+    'RP':'RP'
+  }

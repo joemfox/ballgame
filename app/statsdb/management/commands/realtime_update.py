@@ -1,5 +1,4 @@
 import sys
-import json
 from decimal import Decimal
 
 from bs4 import BeautifulSoup
@@ -16,6 +15,7 @@ import statsapi
 
 import datetime
 import pytz
+from tqdm import tqdm
 
 
 class Command(BaseCommand):
@@ -24,12 +24,21 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("date", type=str)
+        parser.add_argument("terminal_height", type=int,default=32,)
+        parser.add_argument("terminal_width", type=int, default=40)
+        parser.add_argument("overwrite",type=bool, default=True)
         
     def handle(self, *args, **options):
-        date = options.get("date", None)
+        date = options['date']
+        terminal_height = options['terminal_height']
+        terminal_width = options['terminal_width']
+        overwrite = options['overwrite']
         self.games = self.get_games(date)
-        for (date,game_id) in self.games:
-            self.load_game(date,game_id)
+
+
+        for (date, game_id) in tqdm(self.games, desc="Loading games", ncols=terminal_width, position=terminal_height - 16, total=len(self.games), unit="game", leave=False):
+            self.load_game(date, game_id, overwrite)
+            print(f"\033[F\033[K", end="")
 
     def get_games(self,date):
         pacific = pytz.timezone("US/Pacific")
@@ -41,9 +50,6 @@ class Command(BaseCommand):
         start_time = pacific.localize(start_time)
 
         today = now.strftime("%m/%d/%Y")
-        print(now)
-        print(start_time)
-        print(f"Loading game data for {today}")
         sched = [
             (now,d["game_id"]) for d in statsapi.schedule(start_date=today, end_date=today)
         ]
@@ -56,7 +62,7 @@ class Command(BaseCommand):
         else: return 0
 
 
-    def load_game(self, date, game_id):
+    def load_game(self, date, game_id, overwrite):
         box = statsapi.boxscore_data(game_id)
         pbp = statsapi.get('game_playByPlay',{'gamePk':game_id})
         # with open(f'data/test/{game_id}.json','w') as writefile:
@@ -75,22 +81,29 @@ class Command(BaseCommand):
 
             fielding_plays = []
 
-            for play in pbp['allPlays']:
-                for runner in play['runners']:
-                    for fielder in runner['credits']:
-                        if fielder['player']['id'] == batter['personId']:
-                            fielding_plays.append(fielder)
+            try:
+                for play in pbp['allPlays']:
+                    for runner in play['runners']:
+                        for fielder in runner['credits']:
+                            if fielder['player']['id'] == batter['personId']:
+                                fielding_plays.append(fielder)
+            except:
+                pass
 
             statline = None
             try:
                 statline = models.BattingStatLine.objects.get(id=f'{game_id}-{batter["personId"]}')
             except:
+                # print('statline not found, creating new one',file=sys.stderr)
                 statline = models.BattingStatLine()
                 statline.id=f'{game_id}-{batter["personId"]}'   
             statline.date = date
-            player = models.Player.objects.filter(mlbam_id=batter['personId'])
-            if(len(player) == 1):
-                statline.player = player[0]
+            try:
+                player = models.Player.objects.get_or_create(mlbam_id=batter['personId'])
+
+            except:
+                print(f'\r\033[F\033[K\r{batter["name"]} not found\r',file=sys.stderr)
+
             statline.player_mlbam_id = batter['personId']
                 
             statline.last_name = batter['name']
@@ -117,6 +130,7 @@ class Command(BaseCommand):
             statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in play['result']['description']])
             
             statline.lob = batter["lob"]
+            # print(statline,file=sys.stderr)
             statline.save()
 
         for pitcher in pitchers:

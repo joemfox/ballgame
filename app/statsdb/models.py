@@ -2,7 +2,8 @@ import sys
 import datetime
 from dateutil.relativedelta import *
 
-from django.db.models.signals import m2m_changed
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Func
@@ -359,8 +360,10 @@ class Membership(BaseModel):
     date_added = models.DateField()
     
 class BattingStatLine(BaseModel):
+    _id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
+
     # id = game_id + player_id
-    id = models.CharField(max_length=255,null=False, primary_key=True)
+    id = models.CharField(max_length=255,null=False)
 
     # game info
     date = models.DateField(null=False)
@@ -370,11 +373,6 @@ class BattingStatLine(BaseModel):
     player_mlbam_id = models.CharField(max_length=255,null=False)
     last_name = models.CharField(max_length=255,null=True)
     position = models.CharField(max_length=255,null=True)
-
-    # slashline
-    avg = models.DecimalField(max_digits=4,decimal_places=3, blank=True,null=True)
-    obp = models.DecimalField(max_digits=4,decimal_places=3, blank=True,null=True)
-    slg = models.DecimalField(max_digits=4,decimal_places=3, blank=True,null=True)
 
     # game stats (from boxscore)
     batting_order = models.IntegerField(blank=True,null=True)
@@ -402,7 +400,8 @@ class BattingStatLine(BaseModel):
     po = models.IntegerField(blank=True,null=True)
     outfield_assists = models.IntegerField(blank=True,null=True)
 
-    # fantasy score categories
+    # fantasy score categories, should cover everything in settings.FAN_CATEGORIES_HIT
+    # categories with Func in their expressions have special scoring relying on custom functions added via migrations
     FAN_outs = models.GeneratedField(
         expression = Func(F('outs'),function='fan_outs'),
         output_field = models.FloatField(),
@@ -531,15 +530,17 @@ class BattingStatLine(BaseModel):
             return self.player.name
         return None
 
-    # when row is updated, fetch automatically calculated fields (fantasy scores)
-    # then save the sum as FAN_total
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        super(BattingStatLine,self).save(*args,**kwargs)
-        super(BattingStatLine,self).refresh_from_db(*args,**kwargs)
-        fan_total = sum([getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
-        setattr(self,'FAN_total', fan_total)
-        super(BattingStatLine,self).save(*args,**kwargs)
+# when row is updated, fetch automatically calculated fields (fantasy scores)
+# then save the sum as FAN_total
+@receiver(post_save, sender=BattingStatLine)
+def sum_FAN_cols(sender, instance, **kwargs):
+    post_save.disconnect(sum_FAN_cols,sender=sender)
+    # print('statline saved',file=sys.stderr)
+    instance.refresh_from_db()
+    fan_total = sum([getattr(instance,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
+    setattr(instance,'FAN_total', fan_total)
+    instance.save()
+    post_save.connect(sum_FAN_cols,sender=sender)
 
 class PitchingStatLine(BaseModel):
     # id = game_id + player_id

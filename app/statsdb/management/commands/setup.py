@@ -10,7 +10,7 @@ class Command(BaseCommand):
         # call_command("download_fg_rosters")
         # call_command("download_mlb_depthcharts")
         # call_command("download_fg_stats")
-        # call_command("load_rosters")
+        call_command("load_rosters")
         call_command("scrape_mlb_data")
         call_command("import_names")
         call_command("update_status_from_fg_rosters")

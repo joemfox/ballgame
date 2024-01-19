@@ -1,6 +1,6 @@
 import csv
 import ujson as json
-import os
+import sys
 
 from dateutil.parser import parse
 from django.apps import apps
@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
         # os.system("cd register && git pull origin master")
 
-        for x in range(0x0,0xf):
+        for x in range(0x0,0x10):
             with open(f'register/data/people-{x:x}.csv', "r") as readfile:
                 for c in csv.DictReader(readfile):
                     if c["key_fangraphs"] != "":
