@@ -37,7 +37,7 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, ...props }
     const [playerInfo, setPlayerInfo] = useState({ name: '', stats: '' })
 
     const fetchNewPlayerInfo = (id) => {
-        axios.get(`http://localhost:8000/api/player/?id=${id}`)
+        axios.get(`http://localhost:8000/api/player?playerid=${id}`)
             .then(response => {
                 setPlayerInfo(response.data)
                 setPlayer(id)
@@ -93,7 +93,7 @@ export default function LineupCard({ team }) {
             }
         })
         console.log(newLineup)
-        axios.post('http://localhost:8000/api/lineup/', {
+        axios.post('http://localhost:8000/api/lineup', {
             team: 'TST',
             ...newLineup
 

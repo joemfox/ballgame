@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.contrib.auth.models import User
 from rest_framework import routers, serializers, viewsets, generics
+from .api import api
 
 from . import views
 
@@ -21,12 +22,6 @@ router = routers.DefaultRouter()
 router.register(r'users', UserViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
-    re_path(r'^api/players/$',views.PlayerList.as_view()),
-    re_path(r'^api/teams/$',views.TeamList.as_view()),
-    re_path(r'^api/player/$',views.PlayerDetail.as_view({'get':'retrieve'})),
-    re_path(r'^api/lineup/$',views.lineup_detail),
-    path('api/add-player',views.add_player_to_team),
     path('admin/',admin.site.urls),
-    path('api-auth/', include('rest_framework.urls')),
+    path('api/', api.urls),
 ]

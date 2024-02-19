@@ -7,6 +7,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 
 class Command(BaseCommand):
-    statlines = models.BattingStatLine.objects.all()
-    for batter in statlines:
-        batter.save()
+    def handle(self, *args, **options):
+        statlines = models.BattingStatLine.objects.all()
+        for batter in statlines:
+            if batter.player == None:
+                player = models.Player.objects.all().filter(mlbam_id=batter.player_mlbam_id)
+                if(len(player) > 0):
+                    batter.player = player.first()
+            batter.save()

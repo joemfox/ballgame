@@ -18,5 +18,6 @@ markdown
 django-filter
 django-cors-headers
 django-crispy-forms
+django-ninja
 crispy-bootstrap4
 tqdm

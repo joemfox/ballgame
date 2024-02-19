@@ -10,7 +10,7 @@ from django.db.models import F, Func
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
 from nameparser import HumanName
-from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, FAN_CATEGORIES_HIT, POINT_VALUES_HIT
+from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, POINT_VALUES_HIT, FAN_CATEGORIES_HIT
 
 class BaseModel(models.Model):
     active = models.BooleanField(default=True)
@@ -360,7 +360,7 @@ class Membership(BaseModel):
     date_added = models.DateField()
     
 class BattingStatLine(BaseModel):
-    _id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
+    pk_id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
 
     # id = game_id + player_id
     id = models.CharField(max_length=255,null=False)
@@ -515,7 +515,7 @@ class BattingStatLine(BaseModel):
         output_field = models.FloatField(),
         db_persist=True
     )
-    
+
     FAN_total = models.FloatField(null=False,default=0.0,blank=False)
 
     def __unicode__(self):
@@ -530,17 +530,74 @@ class BattingStatLine(BaseModel):
             return self.player.name
         return None
 
-# when row is updated, fetch automatically calculated fields (fantasy scores)
-# then save the sum as FAN_total
-@receiver(post_save, sender=BattingStatLine)
-def sum_FAN_cols(sender, instance, **kwargs):
-    post_save.disconnect(sum_FAN_cols,sender=sender)
-    # print('statline saved',file=sys.stderr)
-    instance.refresh_from_db()
-    fan_total = sum([getattr(instance,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
-    setattr(instance,'FAN_total', fan_total)
-    instance.save()
-    post_save.connect(sum_FAN_cols,sender=sender)
+    # when row is updated, fetch automatically calculated fields (fantasy scores)
+    # then save the sum as FAN_total
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        super(BattingStatLine,self).save(*args,**kwargs)
+        super(BattingStatLine,self).refresh_from_db(*args,**kwargs)
+        print(getattr(self,'FAN_hits'))
+        print([(cat, getattr(self,f'FAN_{cat}')) for cat in FAN_CATEGORIES_HIT])
+        fan_total = sum([getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
+        setattr(self,'FAN_total', fan_total)
+        super(BattingStatLine,self).save(*args,**kwargs)
+
+class SeasonBattingStatline(BaseModel):
+    year = models.IntegerField(blank=False,null=False)
+    games = models.IntegerField(blank=True,null=True)
+
+    # player info
+    player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.CASCADE)
+    player_mlbam_id = models.CharField(max_length=255,null=False)
+
+    ab = models.IntegerField(blank=True,null=True)
+    r = models.IntegerField(blank=True,null=True)
+    h = models.IntegerField(blank=True,null=True)
+    outs = models.IntegerField(blank=True,null=True)
+    doubles = models.IntegerField(blank=True,null=True)
+    triples = models.IntegerField(blank=True,null=True)
+    hr = models.IntegerField(blank=True,null=True)
+    rbi = models.IntegerField(blank=True,null=True)
+    bb = models.IntegerField(blank=True,null=True)
+    k = models.IntegerField(blank=True,null=True)
+    lob = models.IntegerField(blank=True,null=True)
+    sb = models.IntegerField(blank=True,null=True)
+    cs = models.IntegerField(blank=True,null=True)
+    e = models.IntegerField(blank=True,null=True)
+    k_looking = models.IntegerField(blank=True,null=True)
+    rl2o = models.IntegerField(blank=True,null=True)
+    cycle = models.BooleanField(default=False)
+    gidp = models.IntegerField(blank=True,null=True)
+    po = models.IntegerField(blank=True,null=True)
+    outfield_assists = models.IntegerField(blank=True,null=True)
+    FAN_ab = models.FloatField(blank=True,null=True)
+    FAN_r = models.FloatField(blank=True,null=True)
+    FAN_h = models.FloatField(blank=True,null=True)
+    FAN_outs = models.FloatField(blank=True,null=True)
+    FAN_doubles = models.FloatField(blank=True,null=True)
+    FAN_triples = models.FloatField(blank=True,null=True)
+    FAN_hr = models.FloatField(blank=True,null=True)
+    FAN_rbi = models.FloatField(blank=True,null=True)
+    FAN_bb = models.FloatField(blank=True,null=True)
+    FAN_k = models.FloatField(blank=True,null=True)
+    FAN_lob = models.FloatField(blank=True,null=True)
+    FAN_sb = models.FloatField(blank=True,null=True)
+    FAN_cs = models.FloatField(blank=True,null=True)
+    FAN_e = models.FloatField(blank=True,null=True)
+    FAN_k_looking = models.FloatField(blank=True,null=True)
+    FAN_rl2o = models.FloatField(blank=True,null=True)
+    FAN_cycle = models.FloatField(blank=True,null=True)
+    FAN_gidp = models.FloatField(blank=True,null=True)
+    FAN_po = models.FloatField(blank=True,null=True)
+    FAN_outfield_assists = models.FloatField(blank=True,null=True)
+    FAN_total = models.FloatField(null=False,default=0.0,blank=False)
+
+    def __unicode__(self):
+        if self.player:
+            return f'{self.year} - {self.player.name}'
+        else:
+            return f'{self.year} - {self.player_mlbam_id}'
+        return self.name
 
 class PitchingStatLine(BaseModel):
     # id = game_id + player_id
