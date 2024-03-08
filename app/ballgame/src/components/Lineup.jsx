@@ -39,7 +39,6 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, ...props }
     const fetchNewPlayerInfo = (player) => {
         axios.get(`http://localhost:8000/api/player?playerid=${player}`)
             .then(response => {
-                console.log(response)
                 setPlayerInfo(response.data)
                 setPlayer(player.fg_id)
                 setDisplayLineup(f => ({
@@ -63,6 +62,8 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, ...props }
         }
     }
     function canDrop(item, monitor) {
+        console.log(item)
+
         return item.positions.includes(position)
     }
     function collect(monitor) {

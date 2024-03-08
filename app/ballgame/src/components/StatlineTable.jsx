@@ -12,10 +12,11 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PositionSelectDropdown } from './PositionDropdown'
 
 
-export function DataTable({
-    columns, data, setData, pagination, setPagination, pageCount, sorting, setSorting, filters, setColumnFilters
+export default function DataTable({
+    columns, data, setData, pagination, setPagination, metrics, pageCount, sorting, setSorting, filters, setColumnFilters, positionFilters, setPositionFilters
 }) {
     const table = useReactTable({
         data,
@@ -23,32 +24,41 @@ export function DataTable({
         getCoreRowModel: getCoreRowModel(),
         onSortingChange: setSorting,
         manualSorting:true,
+        onColumnFiltersChange: setColumnFilters,
+        manualFiltering:true,
+        manualPagination:true,
         onPaginationChange:setPagination,
         pageCount: pageCount,
         state:{
-            // pagination,
+            pagination,
             sorting,
+            filters
         },
-        // meta:{
-        //     updateRow:(rowIndex,value) => {
-        //         setData(f => {
-        //             f = f.map((row,index) => {
-        //                 if(index === rowIndex) {
-        //                     return value
-        //                 } else {   
-        //                     return row
-        //                 }
-        //             })
-        //             return f
-        //         })
-        //     }
-        // },
+        meta:{
+            updateRow:(rowIndex,value) => {
+                setData(f => {
+                    f = f.map((row,index) => {
+                        if(index === rowIndex) {
+                            return value
+                        } else {   
+                            return row
+                        }
+                    })
+                    return f
+                })
+            },
+            metrics:metrics
+        },
         debugTable:true
     })
 
     return (
         <div>
-            {/* <div className="flex items-center justify-end space-x-2 py-4">
+                        <PositionSelectDropdown 
+                positionFilters={positionFilters}
+                setPositionFilters={setPositionFilters} 
+            />
+            <div className="flex items-center justify-end space-x-2 py-4">
                 <Input 
                     placeholder="Filter by name ..."
                     // value={(table.getColumn("name")?.getFilterValue()) ?? ""}
@@ -78,7 +88,7 @@ export function DataTable({
                 >
                     Next
                 </Button>
-            </div> */}
+            </div>
             <div className="rounded-md border geist-mono">
                 <Table>
                     <TableHeader>
@@ -95,9 +105,11 @@ export function DataTable({
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (table.getRowModel().rows.map((row) => (
+                        {table.getRowModel().rows?.length ? (table.getRowModel().rows.map((row) => {console.log(row.original);return(
                             <TableRow
+                                draggable={true}
                                 key={row.original.fg_id}
+                                dragData={{id:row.original.fg_id, positions:row.original.positions} }
                                 data-state={row.getIsSelected() && 'selected'}
                                 className="h-4"
                                 >
@@ -107,7 +119,7 @@ export function DataTable({
                                     </TableCell>
                                 ))}
                             </TableRow>
-                        )))
+                        )}))
                             : (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">

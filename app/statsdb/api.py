@@ -6,7 +6,7 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from django.db.models import Q
+from django.db.models import Q, F, Avg, StdDev
 from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
@@ -45,22 +45,22 @@ class PlayerFilterSchema(FilterSchema):
     search: Optional[str] = ""
     positions: Optional[List[str]] = None
     year: Optional[str] = '2023'
+    ordering: Optional[str] = ""
 
     def filter(self, queryset):
         combined = Q()
         if self.search:
-            # Create a Q object for filtering by name
-            combined |= Q(name__icontains=self.search)
+            combined |= Q(player_name__icontains=self.search)
 
         if self.positions:
-            # Create a list of Q objects for filtering by positions
             position_matches = [Q(positions__icontains=position) for position in self.positions]
-            # Combine the list of Q objects using OR operator
             combined = Q(combined, Q(*position_matches, _connector=Q.OR), _connector=Q.AND)
 
         if self.search or self.positions:
-            # Filter the queryset using the combined Q objects
             queryset = queryset.filter(combined)
+
+        if self.ordering:
+            queryset = queryset.order_by(self.ordering).exclude(**{f'{self.ordering.replace("-","")}__isnull':True})
         
         return queryset
     
@@ -149,26 +149,16 @@ class SeasonBattingStatLineSchema(Schema):
     FAN_sb: float | None = None
     FAN_total: float | None = None
     player_name: str | None = None
+    fg_id: str | None = None
+    positions: List[str] | None = None
     year: int | None = None
 
-    # def __init__(self):
-    #     super().__init__()
-
-
-    @classmethod
-    def from_instance(cls, instance: SeasonBattingStatLine):
-        new_instance = cls()
-        for field_name in FAN_CATEGORIES_HIT:
-            setattr(new_instance, f'{field_name}',getattr(instance,f'{field_name}'))
-            setattr(new_instance, f'FAN_{field_name}',getattr(instance,f'FAN_{field_name}'))
-        new_instance.FAN_total=instance.FAN_total
-        new_instance.player_name=instance.player.name if instance.player else None
-        new_instance.year=instance.year if instance.year else None
-        return new_instance
 
 class PaginatedSeasonBattingStatLineSchema(Schema):
     results: List[SeasonBattingStatLineSchema]
     count: int
+    avg_total: float | None = None
+    stddev_total: float | None = None
 
 class PitchingStatlineSchema(ModelSchema):
     class Meta:
@@ -204,10 +194,18 @@ class MyAPIController:
         }
     
     @api.get("/players/{year}", response=PaginatedSeasonBattingStatLineSchema)
-    def player_seasons(request, year:str, page: int = 1, page_size: int = 50):
-        queryset = SeasonBattingStatLine.objects.all().filter(year=year).order_by('-FAN_total')
-
-        paginator = Paginator([SeasonBattingStatLineSchema.from_instance(season) for season in queryset], per_page=page_size)
+    def player_seasons(request, year:str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
+        queryset = SeasonBattingStatLine.objects.all(
+            ).filter(
+                year=year
+            ).prefetch_related(
+                'player',
+            ).annotate(player_name=F('player__name')).annotate(positions=F('player__positions')).annotate(fg_id=F('player__fg_id'))
+        queryset = filters.filter(queryset)
+        agg = queryset.filter(FAN_total__gte=0.5).aggregate(avg_total=Avg('FAN_total'),stddev_total=StdDev('FAN_total'))
+        print(agg)
+        
+        paginator = Paginator(queryset, per_page=page_size)
         if page < 1 or page > paginator.num_pages:
             return api.create_response(status=404, content={"detail": "Page does not exist."})
         
@@ -215,7 +213,9 @@ class MyAPIController:
 
         return {
             "results":paginated_data,
-            "count":paginator.count
+            "count":paginator.count,
+            "avg_total":agg['avg_total'],
+            "stddev_total":agg['stddev_total']
         }
 
 
