@@ -21,3 +21,5 @@ django-crispy-forms
 django-ninja
 crispy-bootstrap4
 tqdm
+django-ninja-extra
+ninja-schema

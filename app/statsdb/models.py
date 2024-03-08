@@ -259,6 +259,13 @@ class Player(BaseModel):
         if self.get_team():
             return "%s (%s)" % (self.name, self.get_team().abbreviation)
         return self.name
+
+    def to_api_obj(self):
+        payload = {
+            "id": self.id,
+            "fg_id":self.fg_id
+        }
+        return payload
     
     def set_stats(self, stats_dict):
         if not self.stats:
@@ -408,7 +415,7 @@ class BattingStatLine(BaseModel):
         db_persist=True
     )
 
-    FAN_hits = models.GeneratedField(
+    FAN_h = models.GeneratedField(
         expression = Func(F('h'),function='fan_hits'),
         output_field = models.FloatField(),
         db_persist=True
@@ -536,13 +543,11 @@ class BattingStatLine(BaseModel):
     def save(self, *args, **kwargs):
         super(BattingStatLine,self).save(*args,**kwargs)
         super(BattingStatLine,self).refresh_from_db(*args,**kwargs)
-        print(getattr(self,'FAN_hits'))
-        print([(cat, getattr(self,f'FAN_{cat}')) for cat in FAN_CATEGORIES_HIT])
         fan_total = sum([getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
         setattr(self,'FAN_total', fan_total)
         super(BattingStatLine,self).save(*args,**kwargs)
 
-class SeasonBattingStatline(BaseModel):
+class SeasonBattingStatLine(BaseModel):
     year = models.IntegerField(blank=False,null=False)
     games = models.IntegerField(blank=True,null=True)
 
@@ -572,7 +577,7 @@ class SeasonBattingStatline(BaseModel):
     outfield_assists = models.IntegerField(blank=True,null=True)
     FAN_ab = models.FloatField(blank=True,null=True)
     FAN_r = models.FloatField(blank=True,null=True)
-    FAN_hits = models.FloatField(blank=True,null=True)
+    FAN_h = models.FloatField(blank=True,null=True)
     FAN_outs = models.FloatField(blank=True,null=True)
     FAN_doubles = models.FloatField(blank=True,null=True)
     FAN_triples = models.FloatField(blank=True,null=True)

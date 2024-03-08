@@ -36,14 +36,15 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, ...props }
     const [player, setPlayer] = useState(props.player)
     const [playerInfo, setPlayerInfo] = useState({ name: '', stats: '' })
 
-    const fetchNewPlayerInfo = (id) => {
-        axios.get(`http://localhost:8000/api/player?playerid=${id}`)
+    const fetchNewPlayerInfo = (player) => {
+        axios.get(`http://localhost:8000/api/player?playerid=${player}`)
             .then(response => {
+                console.log(response)
                 setPlayerInfo(response.data)
-                setPlayer(id)
+                setPlayer(player.fg_id)
                 setDisplayLineup(f => ({
                     ...f,
-                    [db_position]: id
+                    [db_position]: player
                 }))
             })
             .catch(err => {
@@ -51,8 +52,8 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, ...props }
             })
     }
     useEffect(() => {
-        if (props.player !== null) {
-            fetchNewPlayerInfo(props.player)
+        if (props.player) {
+            fetchNewPlayerInfo(props.player.fg_id ? props.player.fg_id : props.player)
         }
     }, [props.player])
 

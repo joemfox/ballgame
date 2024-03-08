@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Owner, Team, Player, BattingStatLine, PitchingStatLine, SeasonBattingStatline
+from .models import Owner, Team, Player, BattingStatLine, PitchingStatLine, SeasonBattingStatLine
 # Register your models here.
 
 class BattingStatLineInline(admin.TabularInline):
@@ -23,4 +23,4 @@ admin.site.register(Team)
 admin.site.register(Player, PlayerAdmin)
 admin.site.register(BattingStatLine, BattingStatlineAdmin)
 admin.site.register(PitchingStatLine,PitchingStatlineAdmin)
-admin.site.register(SeasonBattingStatline)
+admin.site.register(SeasonBattingStatLine)

@@ -123,22 +123,22 @@ export default function Players() {
     useEffect(() => {
         let params = new URLSearchParams()
         params.append('page', pageIndex + 1)
-        // params.append('ordering', sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null)
-        // params.append('search', filters.map(d => d.value).join(''))
-        // for (let position in positionFilters) {
-        //     if (positionFilters[position]) {
-        //         params.append('positions', position)
-        //     }
-        // }
+        params.append('ordering', sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : null)
+        params.append('search', filters.map(d => d.value).join(''))
+        for (let position in positionFilters) {
+            if (positionFilters[position]) {
+                params.append('positions', position)
+            }
+        }
         axios.get(`http://localhost:8000/api/players`, {
             params: params
         })
             .then(response => {
-                if (response.data.items) {
-                    let count = Math.ceil(response.data.items.count / response.data.items.length)
+                if (response.data.results) {
+                    let count = Math.ceil(response.data.count / response.data.results.length)
                     setPageCount(count)
-                    setPagination({ pageIndex: pageIndex, pageSize: response.data.items.length })
-                    setPlayers(response.data.items)
+                    setPagination({ pageIndex: pageIndex, pageSize: response.data.results.length })
+                    setPlayers(response.data.results)
                 }
             })
             .catch(err => {

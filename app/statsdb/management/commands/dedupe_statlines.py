@@ -15,9 +15,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         year = options.get("year", None)
         
-        for duplicates in models.SeasonBattingStatline.objects.filter(year=year).values('player').annotate(
+        for duplicates in models.SeasonBattingStatLine.objects.filter(year=year).values('player').annotate(
             records=Count('player')
         ).filter(records__gt=1):
-            for line in models.SeasonBattingStatline.objects.filter(year=year,player=duplicates["player"])[1:]:
+            for line in models.SeasonBattingStatLine.objects.filter(year=year,player=duplicates["player"])[1:]:
                 line.delete()
             

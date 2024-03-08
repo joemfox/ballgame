@@ -15,11 +15,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         year = options.get("year", None)
         print('BEST WORST PLAYERS')
-        queryset = models.SeasonBattingStatline.objects.all().filter(year=year).order_by('-FAN_total')[:25]
+        queryset = models.SeasonBattingStatLine.objects.all().filter(year=year).order_by('-FAN_total')[:25]
         for line in queryset:
             print(f'{getattr(line,"player")}: {getattr(line,"FAN_total")}')
         
-        print('WORST WORST PLAYERS')
-        queryset = models.SeasonBattingStatline.objects.all().filter(year=year).order_by('FAN_total')[:25]
+        print('\nWORST WORST PLAYERS')
+        queryset = models.SeasonBattingStatLine.objects.all().filter(year=year).order_by('FAN_total')[:25]
         for line in queryset:
             print(f'{getattr(line,"player")}: {getattr(line,"FAN_total")}')

@@ -30,11 +30,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'rest_framework',
     'corsheaders',
     'django_filters',
-    'crispy_forms',
-    'crispy_bootstrap4',
+    'ninja_extra',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
@@ -265,7 +263,7 @@ FAN_CATEGORIES_HIT = [
     "outs",
     "bb",
     "triples",
-    "hits",
+    "h",
     "cycle",
     "doubles",
     "outfield_assists",
