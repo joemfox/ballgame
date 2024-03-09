@@ -371,6 +371,7 @@ class BattingStatLine(BaseModel):
 
     # id = game_id + player_id
     id = models.CharField(max_length=255,null=False)
+    fantasy_team = models.ForeignKey(Team, null=True, blank=True, on_delete=models.DO_NOTHING)
 
     # game info
     date = models.DateField(null=False)
@@ -603,6 +604,60 @@ class SeasonBattingStatLine(BaseModel):
         else:
             return f'{self.year} - {self.player_mlbam_id}'
         return self.name
+    
+class TeamBattingStatLine(BaseModel):
+    date = models.DateField(null=False)
+    games = models.IntegerField(blank=True,null=True)
+
+    team = models.ForeignKey(Team, blank=False,null=False, on_delete=models.CASCADE)
+
+    ab = models.IntegerField(blank=True,null=True)
+    r = models.IntegerField(blank=True,null=True)
+    h = models.IntegerField(blank=True,null=True)
+    outs = models.IntegerField(blank=True,null=True)
+    doubles = models.IntegerField(blank=True,null=True)
+    triples = models.IntegerField(blank=True,null=True)
+    hr = models.IntegerField(blank=True,null=True)
+    rbi = models.IntegerField(blank=True,null=True)
+    bb = models.IntegerField(blank=True,null=True)
+    k = models.IntegerField(blank=True,null=True)
+    lob = models.IntegerField(blank=True,null=True)
+    sb = models.IntegerField(blank=True,null=True)
+    cs = models.IntegerField(blank=True,null=True)
+    e = models.IntegerField(blank=True,null=True)
+    k_looking = models.IntegerField(blank=True,null=True)
+    rl2o = models.IntegerField(blank=True,null=True)
+    cycle = models.IntegerField(blank=True,null=True)
+    gidp = models.IntegerField(blank=True,null=True)
+    po = models.IntegerField(blank=True,null=True)
+    outfield_assists = models.IntegerField(blank=True,null=True)
+    FAN_ab = models.FloatField(blank=True,null=True)
+    FAN_r = models.FloatField(blank=True,null=True)
+    FAN_h = models.FloatField(blank=True,null=True)
+    FAN_outs = models.FloatField(blank=True,null=True)
+    FAN_doubles = models.FloatField(blank=True,null=True)
+    FAN_triples = models.FloatField(blank=True,null=True)
+    FAN_hr = models.FloatField(blank=True,null=True)
+    FAN_rbi = models.FloatField(blank=True,null=True)
+    FAN_bb = models.FloatField(blank=True,null=True)
+    FAN_k = models.FloatField(blank=True,null=True)
+    FAN_lob = models.FloatField(blank=True,null=True)
+    FAN_sb = models.FloatField(blank=True,null=True)
+    FAN_cs = models.FloatField(blank=True,null=True)
+    FAN_e = models.FloatField(blank=True,null=True)
+    FAN_k_looking = models.FloatField(blank=True,null=True)
+    FAN_rl2o = models.FloatField(blank=True,null=True)
+    FAN_cycle = models.FloatField(blank=True,null=True)
+    FAN_gidp = models.FloatField(blank=True,null=True)
+    FAN_po = models.FloatField(blank=True,null=True)
+    FAN_outfield_assists = models.FloatField(blank=True,null=True)
+    FAN_total = models.FloatField(null=False,default=0.0,blank=False)
+
+    def __unicode__(self):
+        if self.team:
+            return f'{self.date} - {self.team.abbreviation}'
+        else:
+            return self.date
 
 class PitchingStatLine(BaseModel):
     # id = game_id + player_id

@@ -87,6 +87,8 @@ export default function LineupCard({ team }) {
     const [serverLineup, setServerLineup] = useState({})
     const [displayLineup, setDisplayLineup] = useState({})
 
+    const lineup_team = 'CIN'
+
     const saveLineup = () => {
         let newLineup = {}
         Object.keys(serverLineup).filter(d => d !== 'lineup_team').map(pos => {
@@ -96,7 +98,7 @@ export default function LineupCard({ team }) {
         })
         console.log(newLineup)
         axios.post('http://localhost:8000/api/lineup', {
-            team: 'TST',
+            team: lineup_team,
             ...newLineup
 
         }).then(response => {
@@ -106,7 +108,7 @@ export default function LineupCard({ team }) {
     useEffect(() => {
         axios.get('http://localhost:8000/api/lineup', {
             params: {
-                team: 'TST'
+                team: lineup_team
             }
         }).then(response => {
             setServerLineup(response.data)

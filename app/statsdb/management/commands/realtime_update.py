@@ -99,8 +99,17 @@ class Command(BaseCommand):
                 statline.id=f'{game_id}-{batter["personId"]}'   
             statline.date = date
             try:
-                player = models.Player.objects.all().filter(mlbam_id=batter["personId"]).first()
-
+                player = models.Player.objects.all().filter(mlbam_id=batter["personId"])
+                if(len(player) > 0):
+                    statline.player = player.first()
+                    try:
+                        fantasy_team = getattr(player.first(),'team_assigned')
+                        if fantasy_team is not None:
+                            statline.fantasy_team = fantasy_team
+                            print(f'{player.first().name}: {fantasy_team}')
+                    except AttributeError:
+                        # print('fantasy team not found',file=sys.stderr)
+                        pass
             except:
                 print(f'\r\033[F\033[K\r{batter["name"]} not found\r',file=sys.stderr)
 

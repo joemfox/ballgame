@@ -27,3 +27,4 @@ class Command(BaseCommand):
 
             print(f'\033[{terminal_size.lines}B')
             call_command('realtime_update',day.strftime(settings.DATEFORMAT),terminal_size.lines,terminal_size.columns,False)
+            call_command('aggregate_team_points',day.strftime(settings.DATEFORMAT))

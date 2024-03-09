@@ -249,7 +249,10 @@ class MyAPIController:
             if attr != 'team':
                 player = get_object_or_404(Player.objects.all(), fg_id=value)
                 setattr(lineup, attr, player)
+                setattr(player,'team_assigned',team_obj)
+                player.save()
                 print(attr, value)
+                
         lineup.save()
         return {"success":True}
         
