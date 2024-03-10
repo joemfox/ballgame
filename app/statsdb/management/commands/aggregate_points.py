@@ -34,4 +34,22 @@ class Command(BaseCommand):
                     # print(attr, value)
                     setattr(stats, attr, value)
             stats.save()
+        for player in players:
+            agg = models.PitchingStatLine.objects.all().filter(player=player).filter(date__year = year).aggregate(games=Count("ip"), ip=Sum("ip"), bb=Sum("bb"), er=Sum("er"), h=Sum("h"), bs=Count(Case(When(bs=True,then=1))), k=Sum("k"), hr=Sum("hr"), balks=Sum("balks"), e=Sum("e"), hb=Sum("hb"), bra=Sum("bra"), dpi=Sum("r"), wp=Sum("wp"), ir=Sum("ir"), irs=Sum("irs"), perfect_game=Count(Case(When(perfect_game=True,then=1))), no_hitter=Count(Case(When(no_hitter=True,then=1))), relief_loss=Count(Case(When(relief_loss=True,then=1))),FAN_ip = Sum("FAN_ip"), FAN_bb = Sum("FAN_bb"), FAN_er = Sum("FAN_er"), FAN_h = Sum("FAN_h"), FAN_perfect_game = Sum("FAN_perfect_game"), FAN_k = Sum("FAN_k"), FAN_hr = Sum("FAN_hr"), FAN_bs = Sum("FAN_bs"), FAN_balks = Sum("FAN_balks"), FAN_hb = Sum("FAN_hb"), FAN_bra = Sum("FAN_bra"), FAN_dpi = Sum("FAN_dpi"), FAN_e = Sum("FAN_e"), FAN_wp = Sum("FAN_wp"), FAN_ir = Sum("FAN_ir"), FAN_irs = Sum("FAN_irs"), FAN_no_hitter = Sum("FAN_no_hitter"), FAN_relief_loss = Sum("FAN_relief_loss"))
+            
+            fan_total = sum(filter(None, [agg[f'FAN_{cat}'] for cat in settings.FAN_CATEGORIES_PITCH]))
+            agg["FAN_total"] = fan_total
+            print(f'{player}: {fan_total}')
+
+            stats, created = models.SeasonPitchingStatLine.objects.get_or_create(player=player,year=year)
+            print(player, created)
+            stats.player = player
+            stats.player_mlbam_id = player.mlbam_id if player.mlbam_id else player.fg_id
+            stats.year = year
+            stats.date = datetime.datetime.now()
+            for attr, value in agg.items():
+                if attr not in ['active']:
+                    # print(attr, value)
+                    setattr(stats, attr, value)
+            stats.save()
             

@@ -10,7 +10,7 @@ from django.db.models import F, Func
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField, ArrayField
 from nameparser import HumanName
-from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, POINT_VALUES_HIT, FAN_CATEGORIES_HIT
+from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, POINT_VALUES_HIT, FAN_CATEGORIES_HIT, POINT_VALUES_PITCH, FAN_CATEGORIES_PITCH
 
 class BaseModel(models.Model):
     active = models.BooleanField(default=True)
@@ -660,14 +660,18 @@ class TeamBattingStatLine(BaseModel):
             return self.date
 
 class PitchingStatLine(BaseModel):
+    pk_id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
+
     # id = game_id + player_id
-    id = models.CharField(max_length=255,null=False,primary_key=True)
+    statline_id = models.CharField(max_length=255,null=False)
+    fantasy_team = models.ForeignKey(Team, null=True, blank=True, on_delete=models.DO_NOTHING)
 
     # game info
     date = models.DateField(null=False)
 
     # player info
-    player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.SET_NULL)
+    player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.CASCADE)
+    player_mlbam_id = models.CharField(max_length=255,null=False)
     last_name = models.CharField(max_length=255,null=True)
     position = models.CharField(max_length=255,null=True)
 
@@ -679,15 +683,234 @@ class PitchingStatLine(BaseModel):
     bb = models.IntegerField(blank=True,null=True)
     k = models.IntegerField(blank=True,null=True)
     hr = models.IntegerField(blank=True,null=True)
+    bs = models.BooleanField(null=True)
 
     # game stats (from elsewhere)
     bf = models.IntegerField(blank=True,null=True)
     balks = models.IntegerField(blank=True,null=True)
-    qs = models.BooleanField(null=True)
+    hb = models.IntegerField(blank=True,null=True)
+    bra = models.IntegerField(blank=True,null=True)
+    dpi = models.IntegerField(blank=True,null=True)
+    e = models.IntegerField(blank=True,null=True)
+    wp = models.IntegerField(blank=True, null=True)
+    ir = models.IntegerField(blank=True,null=True)
+    irs = models.IntegerField(blank=True,null=True)
+    quality_start = models.BooleanField(null=True)
     perfect_game = models.BooleanField(null=True)
     no_hitter= models.BooleanField(null=True)
+    relief_loss = models.BooleanField(null=True)
+
+    FAN_hr = models.GeneratedField(
+        expression = Func(F('hr'),function='fan_hr_pitch'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_k = models.GeneratedField(
+        expression = Func(F('k'),function='fan_k_pitch'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_perfect_game = models.GeneratedField(
+        expression = Func(F('perfect_game'), function='fan_perfect_game'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_no_hitter = models.GeneratedField(
+        expression = Func(F('no_hitter'), function='fan_no_hitter'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_relief_loss = models.GeneratedField(
+        expression = Func(F('relief_loss'), function='fan_relief_loss'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_bs = models.GeneratedField(
+        expression = Func(F('bs'), function='fan_bs'),
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_ip = models.GeneratedField(
+        expression = F('ip') * POINT_VALUES_PITCH['ip'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_h = models.GeneratedField(
+        expression = F('h') * POINT_VALUES_PITCH['h'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_er = models.GeneratedField(
+        expression = F('er') * POINT_VALUES_PITCH['er'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_bb = models.GeneratedField(
+        expression = F('bb') * POINT_VALUES_PITCH['bb'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_balks = models.GeneratedField(
+        expression = F('balks') * POINT_VALUES_PITCH['balks'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_hb = models.GeneratedField(
+        expression = F('hb') * POINT_VALUES_PITCH['hb'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_bra = models.GeneratedField(
+        expression = F('bra') * POINT_VALUES_PITCH['bra'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_dpi = models.GeneratedField(
+        expression = F('dpi') * POINT_VALUES_PITCH['dpi'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_e = models.GeneratedField(
+        expression = F('e') * POINT_VALUES_PITCH['e'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_wp = models.GeneratedField(
+        expression = F('wp') * POINT_VALUES_PITCH['wp'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_ir = models.GeneratedField(
+        expression = F('ir') * POINT_VALUES_PITCH['ir'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+    FAN_irs = models.GeneratedField(
+        expression = F('irs') * POINT_VALUES_PITCH['irs'],
+        output_field = models.FloatField(),
+        db_persist=True
+    )
+
+    FAN_total = models.FloatField(null=False,default=0.0,blank=False)
     
     def player_display(self):
         if self.player:
             return self.player.name
         return None
+    def __unicode__(self):
+        if self.player:
+            return f'{self.date} - {self.player.name}'
+        else:
+            return f'{self.date} - {self.last_name}' 
+    
+    # when row is updated, fetch automatically calculated fields (fantasy scores)
+    # then save the sum as FAN_total
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        super(PitchingStatLine,self).save(*args,**kwargs)
+        super(PitchingStatLine,self).refresh_from_db(*args,**kwargs)
+        fan_total = sum(filter(None,[getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_PITCH]))
+        setattr(self,'FAN_total', fan_total)
+        super(PitchingStatLine,self).save(*args,**kwargs)
+
+class SeasonPitchingStatLine(BaseModel):
+    year = models.IntegerField(blank=False,null=False)
+    games = models.IntegerField(blank=True,null=True)
+
+    # player info
+    player = models.ForeignKey(Player,blank=True,null=True,on_delete=models.CASCADE)
+    player_mlbam_id = models.CharField(max_length=255,null=False)
+
+    ip = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    h = models.IntegerField(blank=True,null=True)
+    r = models.IntegerField(blank=True,null=True)
+    er = models.IntegerField(blank=True,null=True)
+    bb = models.IntegerField(blank=True,null=True)
+    k = models.IntegerField(blank=True,null=True)
+    hr = models.IntegerField(blank=True,null=True)
+    bs = models.BooleanField(null=True)
+    bf = models.IntegerField(blank=True,null=True)
+    balks = models.IntegerField(blank=True,null=True)
+    hb = models.IntegerField(blank=True,null=True)
+    bra = models.IntegerField(blank=True,null=True)
+    dpi = models.IntegerField(blank=True,null=True)
+    e = models.IntegerField(blank=True,null=True)
+    wp = models.IntegerField(blank=True, null=True)
+    ir = models.IntegerField(blank=True,null=True)
+    irs = models.IntegerField(blank=True,null=True)
+    quality_start = models.BooleanField(null=True)
+    perfect_game = models.BooleanField(null=True)
+    no_hitter= models.BooleanField(null=True)
+    relief_loss = models.BooleanField(null=True)
+    FAN_ip = models.FloatField(blank=True, null=True)
+    FAN_h = models.FloatField(blank=True,null=True)
+    FAN_r = models.FloatField(blank=True,null=True)
+    FAN_er = models.FloatField(blank=True,null=True)
+    FAN_bb = models.FloatField(blank=True,null=True)
+    FAN_k = models.FloatField(blank=True,null=True)
+    FAN_hr = models.FloatField(blank=True,null=True)
+    FAN_bs = models.FloatField(null=True)
+    # FAN_bf = models.FloatField(blank=True,null=True)
+    FAN_balks = models.FloatField(blank=True,null=True)
+    FAN_hb = models.FloatField(blank=True,null=True)
+    FAN_bra = models.FloatField(blank=True,null=True)
+    FAN_dpi = models.FloatField(blank=True,null=True)
+    FAN_e = models.FloatField(blank=True,null=True)
+    FAN_wp = models.FloatField(blank=True, null=True)
+    FAN_ir = models.FloatField(blank=True,null=True)
+    FAN_irs = models.FloatField(blank=True,null=True)
+    # FAN_quality_start = models.FloatField(null=True)
+    FAN_perfect_game = models.FloatField(null=True)
+    FAN_no_hitter= models.FloatField(null=True)
+    FAN_relief_loss = models.FloatField(null=True)
+    FAN_total = models.FloatField(null=False,default=0.0,blank=False)
+
+class TeamPitchingStatLine(BaseModel):
+    date = models.DateField(null=False)
+    games = models.IntegerField(blank=True,null=True)
+
+    team = models.ForeignKey(Team, blank=False,null=False, on_delete=models.CASCADE)
+
+    ip = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    h = models.IntegerField(blank=True,null=True)
+    r = models.IntegerField(blank=True,null=True)
+    er = models.IntegerField(blank=True,null=True)
+    bb = models.IntegerField(blank=True,null=True)
+    k = models.IntegerField(blank=True,null=True)
+    hr = models.IntegerField(blank=True,null=True)
+    bs = models.BooleanField(null=True)
+    bf = models.IntegerField(blank=True,null=True)
+    balks = models.IntegerField(blank=True,null=True)
+    hb = models.IntegerField(blank=True,null=True)
+    bra = models.IntegerField(blank=True,null=True)
+    dpi = models.IntegerField(blank=True,null=True)
+    e = models.IntegerField(blank=True,null=True)
+    wp = models.IntegerField(blank=True, null=True)
+    ir = models.IntegerField(blank=True,null=True)
+    irs = models.IntegerField(blank=True,null=True)
+    quality_start = models.BooleanField(null=True)
+    perfect_game = models.BooleanField(null=True)
+    no_hitter= models.BooleanField(null=True)
+    relief_loss = models.BooleanField(null=True)
+    FAN_ip = models.FloatField(blank=True, null=True)
+    FAN_h = models.FloatField(blank=True,null=True)
+    FAN_r = models.FloatField(blank=True,null=True)
+    FAN_er = models.FloatField(blank=True,null=True)
+    FAN_bb = models.FloatField(blank=True,null=True)
+    FAN_k = models.FloatField(blank=True,null=True)
+    FAN_hr = models.FloatField(blank=True,null=True)
+    FAN_bs = models.FloatField(null=True)
+    # FAN_bf = models.FloatField(blank=True,null=True)
+    FAN_balks = models.FloatField(blank=True,null=True)
+    FAN_hb = models.FloatField(blank=True,null=True)
+    FAN_bra = models.FloatField(blank=True,null=True)
+    FAN_dpi = models.FloatField(blank=True,null=True)
+    FAN_e = models.FloatField(blank=True,null=True)
+    FAN_wp = models.FloatField(blank=True, null=True)
+    FAN_ir = models.FloatField(blank=True,null=True)
+    FAN_irs = models.FloatField(blank=True,null=True)
+    # FAN_quality_start = models.FloatField(null=True)
+    FAN_perfect_game = models.FloatField(null=True)
+    FAN_no_hitter= models.FloatField(null=True)
+    FAN_relief_loss = models.FloatField(null=True)
+    FAN_total = models.FloatField(null=False,default=0.0,blank=False)

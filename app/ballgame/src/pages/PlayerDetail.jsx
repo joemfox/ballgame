@@ -4,6 +4,7 @@ import axios from 'axios'
 import DataTable from '../components/StatlineTable';
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
+import { FAN_columns } from '../lib/dataColumns';
 
 
 export default function PlayerDetail(){
@@ -29,10 +30,10 @@ export default function PlayerDetail(){
     return (
         <DndProvider backend={HTML5Backend}>
         {playerData.first_name} {playerData.last_name}
-        <DataTable
+        {/* <DataTable
             data={battingStatLines.length > 0 ? battingStatLines : []}
             columns={FAN_columns}
-        />
+        /> */}
         </DndProvider>
     )
 }

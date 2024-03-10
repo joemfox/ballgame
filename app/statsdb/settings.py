@@ -320,3 +320,53 @@ POINT_VALUES_HIT = {
     'k_min_2':4,
     'sb':-3,
 }
+
+FAN_CATEGORIES_PITCH = [
+    "ip",
+    "h",
+    "er",
+    "bb",
+    "k",
+    "hr",
+    "bs",
+    "balks",
+    "hb",
+    "bra",
+    "dpi",
+    "e",
+    "wp",
+    "ir",
+    "irs",
+    "perfect_game",
+    "no_hitter",
+    "relief_loss"
+]
+
+POINT_VALUES_PITCH = {
+    'ip':-1.5,
+    'h':0.5,
+    'er':1,
+    'bb':0.5,
+    'k_bp_1':7,
+    'k_bp_2':9,
+    'k_max_1':-0.5,
+    'k_max_2':-1,
+    'k_min_2':-2,
+    'hr_bp_1':1,
+    'hr_bp_2':2,
+    'hr_max_1':3,
+    'hr_max_2':3.5,
+    'hr_min_2':4,
+    'bs':5,
+    'balks':5,
+    'hb':1,
+    'bra':1,
+    'dpi':-1,
+    'e':1,
+    'wp':2,
+    'ir':5,
+    'irs':-5,
+    'perfect_game':-1000,
+    'no_hitter':-100,
+    'relief_loss':3
+}
