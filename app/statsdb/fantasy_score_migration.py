@@ -19,6 +19,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(f"CREATE OR REPLACE FUNCTION fan_no_hitter(boolean) RETURNS numeric IMMUTABLE as $$ SELECT CASE WHEN $1 THEN {settings.POINT_VALUES_PITCH['no_hitter']} ELSE 0 END; $$ LANGUAGE SQL;",('DROP FUNCTION IF EXISTS fan_no_hitter()')),
         migrations.RunSQL(f"CREATE OR REPLACE FUNCTION fan_relief_loss(boolean) RETURNS numeric IMMUTABLE as $$ SELECT CASE WHEN $1 THEN {settings.POINT_VALUES_PITCH['relief_loss']} ELSE 0 END; $$ LANGUAGE SQL;",('DROP FUNCTION IF EXISTS fan_relief_loss()')),
         migrations.RunSQL(f"CREATE OR REPLACE FUNCTION fan_bs(boolean) RETURNS numeric IMMUTABLE as $$ SELECT CASE WHEN $1 THEN {settings.POINT_VALUES_PITCH['bs']} ELSE 0 END; $$ LANGUAGE SQL;",('DROP FUNCTION IF EXISTS fan_bs()')),
+        migrations.RunSQL(f"CREATE OR REPLACE FUNCTION fan_ip(numeric) RETURNS numeric IMMUTABLE as $$ SELECT CASE WHEN $1 > 0.9 THEN ((FLOOR($1) * 3) + (($1 % FLOOR($1)) * 10)) * ({settings.POINT_VALUES_PITCH['ip']} / 3) ELSE ($1 * 10) * ({settings.POINT_VALUES_PITCH['ip']} / 3)({settings.POINT_VALUES_PITCH['ip']} / 3) END; $$ LANGUAGE SQL;",('DROP FUNCTION IF EXISTS fan_ip()'))
     ]
 
     

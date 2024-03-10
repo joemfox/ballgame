@@ -676,7 +676,7 @@ class PitchingStatLine(BaseModel):
     position = models.CharField(max_length=255,null=True)
 
     # game stats (from boxscore)
-    ip = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    ip = models.DecimalField(max_digits=4, decimal_places=1, blank=False, null=False, default=0.0)
     h = models.IntegerField(blank=True,null=True)
     r = models.IntegerField(blank=True,null=True)
     er = models.IntegerField(blank=True,null=True)
@@ -731,7 +731,7 @@ class PitchingStatLine(BaseModel):
         db_persist=True
     )
     FAN_ip = models.GeneratedField(
-        expression = F('ip') * POINT_VALUES_PITCH['ip'],
+        expression = Func(F('ip'), function='fan_ip'),
         output_field = models.FloatField(),
         db_persist=True
     )
@@ -828,7 +828,6 @@ class SeasonPitchingStatLine(BaseModel):
     bb = models.IntegerField(blank=True,null=True)
     k = models.IntegerField(blank=True,null=True)
     hr = models.IntegerField(blank=True,null=True)
-    bs = models.BooleanField(null=True)
     bf = models.IntegerField(blank=True,null=True)
     balks = models.IntegerField(blank=True,null=True)
     hb = models.IntegerField(blank=True,null=True)
@@ -838,6 +837,7 @@ class SeasonPitchingStatLine(BaseModel):
     wp = models.IntegerField(blank=True, null=True)
     ir = models.IntegerField(blank=True,null=True)
     irs = models.IntegerField(blank=True,null=True)
+    bs = models.BooleanField(null=True)
     quality_start = models.BooleanField(null=True)
     perfect_game = models.BooleanField(null=True)
     no_hitter= models.BooleanField(null=True)
@@ -864,6 +864,12 @@ class SeasonPitchingStatLine(BaseModel):
     FAN_no_hitter= models.FloatField(null=True)
     FAN_relief_loss = models.FloatField(null=True)
     FAN_total = models.FloatField(null=False,default=0.0,blank=False)
+    def __unicode__(self):
+        if self.player:
+            return f'{self.year} - {self.player.name}'
+        else:
+            return f'{self.year} - {self.player_mlbam_id}'
+        return self.name
 
 class TeamPitchingStatLine(BaseModel):
     date = models.DateField(null=False)
@@ -914,3 +920,9 @@ class TeamPitchingStatLine(BaseModel):
     FAN_no_hitter= models.FloatField(null=True)
     FAN_relief_loss = models.FloatField(null=True)
     FAN_total = models.FloatField(null=False,default=0.0,blank=False)
+
+    def __unicode__(self):
+        if self.team:
+            return f'{self.date} - {self.team.abbreviation}'
+        else:
+            return self.date

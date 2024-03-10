@@ -1,3 +1,4 @@
+import sys
 from http import HTTPStatus
 from typing import List, Optional, ClassVar
 from django.core.exceptions import (
@@ -11,7 +12,7 @@ from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine
+from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine
 from ninja import NinjaAPI, Schema, ModelSchema, FilterSchema, Query
 from ninja_extra import (api_controller, NinjaExtraAPI)
 from ninja.errors import ValidationError as NinjaValidationError
@@ -165,6 +166,55 @@ class PitchingStatlineSchema(ModelSchema):
         model = PitchingStatLine
         fields = '__all__'
 
+class SeasonPitchingStatLineSchema(Schema):
+    ip: float | None = None
+    h: int | None = None
+    er: int | None = None
+    bb: int | None = None
+    k: int | None = None
+    hr: int | None = None
+    bs: int | None = None
+    balks: int | None = None
+    hb: int | None = None
+    bra: int | None = None
+    dpi: int | None = None
+    e: int | None = None
+    wp: int | None = None
+    ir: int | None = None
+    irs: int | None = None
+    perfect_game: int | None = None
+    no_hitter: int | None = None
+    relief_loss: int | None = None
+    FAN_ip: float | None = None
+    FAN_h: float | None = None
+    FAN_er: float | None = None
+    FAN_bb: float | None = None
+    FAN_k: float | None = None
+    FAN_hr: float | None = None
+    FAN_bs: float | None = None
+    FAN_balks: float | None = None
+    FAN_hb: float | None = None
+    FAN_bra: float | None = None
+    FAN_dpi: float | None = None
+    FAN_e: float | None = None
+    FAN_wp: float | None = None
+    FAN_ir: float | None = None
+    FAN_irs: float | None = None
+    FAN_perfect_game: float | None = None
+    FAN_no_hitter: float | None = None
+    FAN_relief_loss: float | None = None
+    FAN_total: float | None = None
+    player_name: str | None = None
+    fg_id: str | None = None
+    positions: List[str] | None = None
+    year: int | None = None
+
+class PaginatedSeasonPitchingStatLineSchema(Schema):
+    results: List[SeasonPitchingStatLineSchema]
+    count: int
+    avg_total: float | None = None
+    stddev_total: float | None = None
+
 @api_controller('')
 class MyAPIController:
     @api.get("/player", response=PlayerSchema)
@@ -172,10 +222,14 @@ class MyAPIController:
     def player(request, playerid: str):
         return get_object_or_404(Player.objects.all(), fg_id=playerid)
     
-    @api.get("/player/{playerid}/season/{year}", response=SeasonBattingStatLineSchema)
+    @api.get("/player/{playerid}/season/{year}/hit", response=SeasonBattingStatLineSchema)
     def season(request, playerid: str, year:str):
         player = get_object_or_404(Player.objects.all(), fg_id=playerid)
         return get_object_or_404(SeasonBattingStatLine.objects.all(), player=player, year=year)
+    @api.get("/player/{playerid}/season/{year}/pitch", response=SeasonPitchingStatLineSchema)
+    def season(request, playerid: str, year:str):
+        player = get_object_or_404(Player.objects.all(), fg_id=playerid)
+        return get_object_or_404(SeasonPitchingStatLine.objects.all(), player=player, year=year)
 
     @api.get("/players", response=PaginatedPlayerSchema)
     def players(request, filters: PlayerFilterSchema = Query(PlayerFilterSchema()), page: int = 1, page_size: int = 50):
@@ -193,9 +247,33 @@ class MyAPIController:
             "count": paginator.count,
         }
     
-    @api.get("/players/{year}", response=PaginatedSeasonBattingStatLineSchema)
+    @api.get("/players/{year}/hit", response=PaginatedSeasonBattingStatLineSchema)
     def player_seasons(request, year:str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
         queryset = SeasonBattingStatLine.objects.all(
+            ).filter(
+                year=year
+            ).prefetch_related(
+                'player',
+            ).annotate(player_name=F('player__name')).annotate(positions=F('player__positions')).annotate(fg_id=F('player__fg_id'))
+        queryset = filters.filter(queryset)
+        agg = queryset.filter(FAN_total__gte=0.5).aggregate(avg_total=Avg('FAN_total'),stddev_total=StdDev('FAN_total'))
+        print(agg)
+        
+        paginator = Paginator(queryset, per_page=page_size)
+        if page < 1 or page > paginator.num_pages:
+            return api.create_response(status=404, content={"detail": "Page does not exist."})
+        
+        paginated_data = paginator.page(page)
+
+        return {
+            "results":paginated_data,
+            "count":paginator.count,
+            "avg_total":agg['avg_total'],
+            "stddev_total":agg['stddev_total']
+        }
+    @api.get("/players/{year}/pitch", response=PaginatedSeasonPitchingStatLineSchema)
+    def player_seasons(request, year:str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
+        queryset = SeasonPitchingStatLine.objects.all(
             ).filter(
                 year=year
             ).prefetch_related(

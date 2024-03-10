@@ -92,73 +92,71 @@ class Command(BaseCommand):
         pitchers += awayPitchers
         pitchers += homePitchers
 
-        # for batter in batters:
-        #     batting_plays = [p for p in pbp['allPlays'] if p['matchup']['batter']['id'] == batter['personId']]
+        for batter in batters:
+            batting_plays = [p for p in pbp['allPlays'] if p['matchup']['batter']['id'] == batter['personId']]
 
-        #     running_plays = [[runner for runner in p['runners'] if runner['details']['runner']['id'] == batter['personId']][0] for p in pbp['allPlays'] if len([r for r in p['runners'] if r['details']['runner']['id'] == batter['personId'] and r['movement']['originBase'] is not None]) > 0]
+            running_plays = [[runner for runner in p['runners'] if runner['details']['runner']['id'] == batter['personId']][0] for p in pbp['allPlays'] if len([r for r in p['runners'] if r['details']['runner']['id'] == batter['personId'] and r['movement']['originBase'] is not None]) > 0]
 
-        #     fielding_plays = []
+            fielding_plays = []
 
-        #     try:
-        #         for play in pbp['allPlays']:
-        #             for runner in play['runners']:
-        #                 for fielder in runner['credits']:
-        #                     if fielder['player']['id'] == batter['personId']:
-        #                         fielding_plays.append(fielder)
-        #     except:
-        #         pass
+            try:
+                for play in pbp['allPlays']:
+                    for runner in play['runners']:
+                        for fielder in runner['credits']:
+                            if fielder['player']['id'] == batter['personId']:
+                                fielding_plays.append(fielder)
+            except:
+                pass
 
-        #     statline = None
-        #     try:
-        #         statline = models.BattingStatLine.objects.get(id=f'{game_id}-{batter["personId"]}')
-        #     except:
-        #         # print('statline not found, creating new one',file=sys.stderr)
-        #         statline = models.BattingStatLine()
-        #         statline.id=f'{game_id}-{batter["personId"]}'   
-        #     statline.date = date
-        #     try:
-        #         player = models.Player.objects.all().filter(mlbam_id=batter["personId"])
-        #         if(len(player) > 0):
-        #             statline.player = player.first()
-        #             try:
-        #                 fantasy_team = getattr(player.first(),'team_assigned')
-        #                 if fantasy_team is not None:
-        #                     statline.fantasy_team = fantasy_team
-        #                     print(f'{player.first().name}: {fantasy_team}')
-        #             except AttributeError:
-        #                 # print('fantasy team not found',file=sys.stderr)
-        #                 pass
-        #     except:
-        #         print(f'\r\033[F\033[K\r{batter["name"]} not found\r',file=sys.stderr)
+            statline = None
+            try:
+                statline = models.BattingStatLine.objects.get(id=f'{game_id}-{batter["personId"]}')
+            except:
+                # print('statline not found, creating new one',file=sys.stderr)
+                statline = models.BattingStatLine()
+                statline.id=f'{game_id}-{batter["personId"]}'   
+            statline.date = date
+            
+            player = models.Player.objects.all().filter(mlbam_id=batter["personId"])
+            if(len(player) > 0):
+                statline.player = player.first()
+                try:
+                    fantasy_team = getattr(player.first(),'team_assigned')
+                    if fantasy_team is not None:
+                        statline.fantasy_team = fantasy_team
+                        # print(f'{player.first().name}: {fantasy_team}')
+                except AttributeError:
+                    # print('fantasy team not found',file=sys.stderr)
+                    pass
 
-        #     statline.player_mlbam_id = batter['personId']
+            statline.player_mlbam_id = batter['personId']
                 
-        #     statline.last_name = batter['name']
-        #     statline.ab = batter["ab"]
-        #     statline.r = batter["r"]
-        #     statline.h = batter["h"]
-        #     statline.outs = int(batter['ab']) - int(batter['h'])
-        #     statline.doubles = batter["doubles"]
-        #     statline.triples = batter["triples"]
-        #     statline.hr = batter["hr"]
-        #     statline.rbi = batter["rbi"]
-        #     statline.sb = batter["sb"]
-        #     statline.bb = batter["bb"]
-        #     statline.k = batter["k"]
+            statline.last_name = batter['name']
+            statline.ab = batter["ab"]
+            statline.r = batter["r"]
+            statline.h = batter["h"]
+            statline.outs = int(batter['ab']) - int(batter['h'])
+            statline.doubles = batter["doubles"]
+            statline.triples = batter["triples"]
+            statline.hr = batter["hr"]
+            statline.rbi = batter["rbi"]
+            statline.sb = batter["sb"]
+            statline.bb = batter["bb"]
+            statline.k = batter["k"]
             
-        #     singles = int(statline.h) - int(statline.hr) - int(statline.triples) - int(statline.doubles)
-        #     statline.cycle = all(h > 0 for h in [int(s) for s in [statline.doubles,statline.triples,statline.hr,singles]])
-        #     statline.rl2o = sum([self.count_rl2o(play) for play in batting_plays])
-        #     statline.gidp = len([p for p in batting_plays if p['result']['eventType'] == 'grounded_into_double_play'])
-        #     statline.po = len([play for play in running_plays if play['details']['eventType'] is not None and 'pickoff' in play['details']['eventType']])
-        #     statline.cs = len([play for play in running_plays if play['details']['eventType'] is not None and 'caught_stealing' in play['details']['eventType'] and 'pickoff' not in play['details']['eventType']])
-        #     statline.outfield_assists = len([play for play in fielding_plays if play['credit'] == 'f_assist_of'])
-        #     statline.e = len([play for play in fielding_plays if 'error' in play['credit']])
-        #     statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in play['result']['description']])
+            singles = int(statline.h) - int(statline.hr) - int(statline.triples) - int(statline.doubles)
+            statline.cycle = all(h > 0 for h in [int(s) for s in [statline.doubles,statline.triples,statline.hr,singles]])
+            statline.rl2o = sum([self.count_rl2o(play) for play in batting_plays])
+            statline.gidp = len([p for p in batting_plays if p['result']['eventType'] == 'grounded_into_double_play'])
+            statline.po = len([play for play in running_plays if play['details']['eventType'] is not None and 'pickoff' in play['details']['eventType']])
+            statline.cs = len([play for play in running_plays if play['details']['eventType'] is not None and 'caught_stealing' in play['details']['eventType'] and 'pickoff' not in play['details']['eventType']])
+            statline.outfield_assists = len([play for play in fielding_plays if play['credit'] == 'f_assist_of'])
+            statline.e = len([play for play in fielding_plays if 'error' in play['credit']])
+            statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in play['result']['description']])
             
-        #     statline.lob = batter["lob"]
-        #     # print(statline,file=sys.stderr)
-        #     statline.save()
+            statline.lob = batter["lob"]
+            # print(statline,file=sys.stderr)
+            statline.save()
 
         def is_qs(pitcher, line):
             return not pitcher['is_reliever'] and Decimal(line['earnedRuns']) <= 3 and Decimal(line['inningsPitched']) >= 6
@@ -222,11 +220,8 @@ class Command(BaseCommand):
                 except AttributeError:
                     # print('fantasy team not found',file=sys.stderr)
                     pass
-            else:
-                print(f'\r\033[F\033[K\r{pitcher["name"]} not found\r',file=sys.stderr)
 
             setattr(statline, 'player_mlbam_id', pitcher['personId'])
-
             setattr(statline, 'last_name', pitcher['name'])
             setattr(statline, 'ip', Decimal(pitcher["ip"]))
             setattr(statline, 'h', pitcher["h"])

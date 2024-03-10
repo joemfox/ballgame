@@ -1,5 +1,6 @@
-import React, {useMemo} from 'react'
+import React, {useEffect, useState} from 'react'
 import { flexRender, getCoreRowModel, useReactTable  } from "@tanstack/react-table"
+import axios from 'axios'
 
 import {
     Table,
@@ -13,13 +14,66 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PositionSelectDropdown } from './PositionDropdown'
-
+import columnData from '../lib/dataColumns'
 
 export default function DataTable({
-    columns, data, setData, pagination, setPagination, metrics, pageCount, sorting, setSorting, filters, setColumnFilters, positionFilters, setPositionFilters
+    type,
+    scoreType
 }) {
+    const [players, setPlayers] = useState([])
+    const [{ pageIndex, pageSize }, setPagination] = useState({ pageIndex: 0, pageSize: 100 })
+    const [pageCount, setPageCount] = useState(-1)
+    
+    const columns = columnData[`${scoreType}_columns_${type}`]
+  
+    const defaultSort = {desc:true,id:'FAN_total'}
+    const [sorting, setSorting] = useState([defaultSort])
+  
+    const [metrics,setMetrics] = useState([])
+    
+    const [filters, setColumnFilters] = useState([])
+    const [positionFilters, setPositionFilters] = useState({
+        "C": false,
+        "1B": false,
+        "2B": false,
+        "SS": false,
+        "3B": false,
+        "LF": false,
+        "CF": false,
+        "RF": false,
+        "SP": false,
+        "RP": false,
+    })
+    useEffect(() => {
+        let params = new URLSearchParams()
+        params.append('page', pageIndex + 1)
+        params.append('ordering', sorting.length > 0 ? sorting.map(d => `${d.desc ? '-' : ''}${d.id}`).join(',') : '-FAN_total')
+        params.append('search', filters.map(d => d.value).join(''))
+        for (let position in positionFilters) {
+            if (positionFilters[position]) {
+                params.append('positions', position)
+            }
+        }
+        console.log(params)
+        axios.get(`http://localhost:8000/api/players/2023/${type}`, {
+            params: params
+        })
+            .then(response => {
+                if (response.data.results) {
+                    let count = Math.ceil(response.data.count / response.data.results.length)
+                    setMetrics({'avg':response.data.avg_total,'stdDev':response.data.stddev_total})
+                    setPageCount(count)
+                    setPagination({ pageIndex: pageIndex, pageSize: response.data.results.length })
+                    setPlayers(response.data.results)
+                }
+            })
+            .catch(err => {
+                console.log(err)
+            })
+    }, [type, pageIndex, sorting, filters,positionFilters])
+    
     const table = useReactTable({
-        data,
+        data:players,
         columns,
         getCoreRowModel: getCoreRowModel(),
         onSortingChange: setSorting,
@@ -30,7 +84,7 @@ export default function DataTable({
         onPaginationChange:setPagination,
         pageCount: pageCount,
         state:{
-            pagination,
+            // pagination,
             sorting,
             filters
         },

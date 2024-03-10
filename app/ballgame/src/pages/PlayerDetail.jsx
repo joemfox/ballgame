@@ -4,7 +4,7 @@ import axios from 'axios'
 import DataTable from '../components/StatlineTable';
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { FAN_columns } from '../lib/dataColumns';
+import { FAN_columns_hit } from '../lib/dataColumns';
 
 
 export default function PlayerDetail(){
