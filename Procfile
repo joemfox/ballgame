@@ -1,2 +1,2 @@
 web: gunicorn statsdb.wsgi --log-file -
-release: bash start.sh
+release: bash app/start.sh
