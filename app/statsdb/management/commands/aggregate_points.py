@@ -54,7 +54,7 @@ class Command(BaseCommand):
                 wp=Sum("wp"), 
                 ir=Sum("ir"), 
                 irs=Sum("irs"), 
-                bs=Count(Case(When(bs=True,then=1))), 
+                # bs=Count(Case(When(bs=True,then=1))), 
                 # perfect_game=Count(Case(When(perfect_game=True,then=1))), 
                 # no_hitter=Count(Case(When(no_hitter=True,then=1))), 
                 # relief_loss=Count(Case(When(relief_loss=True,then=1))),

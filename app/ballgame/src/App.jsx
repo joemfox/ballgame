@@ -28,7 +28,7 @@ function App() {
     <Router>
       <header>
         <div className="container flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
-          <h2 className="text-lg font-semibold"><a href="/">gidp.zone</a></h2>
+          <h2 className="text-lg font-semibold"><a href="/">ballgame [alpha]</a></h2>
         </div>
         <Separator/>
       </header>
@@ -63,7 +63,7 @@ function App() {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={defaultLayout[1]} minSize={30} className="">
-          <div className="m-auto w-[980px]">
+          <div className="m-auto w-auto px-4">
             <ScrollArea className="h-100" direction="vertical">
         <Routes>
             <Route path="/" element={<Team/>}/>

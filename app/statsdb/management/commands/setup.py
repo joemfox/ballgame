@@ -7,8 +7,8 @@ from statsdb import models, utils
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        # call_command("download_fg_rosters")
-        # call_command("download_mlb_depthcharts")
+        call_command("download_fg_rosters")
+        call_command("download_mlb_depthcharts")
         # call_command("download_fg_stats")
         call_command("load_rosters")
         call_command("scrape_mlb_data")

@@ -23,3 +23,4 @@ crispy-bootstrap4
 tqdm
 django-ninja-extra
 ninja-schema
+dj-database-url
