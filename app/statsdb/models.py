@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Func
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.fields import ArrayField
 from nameparser import HumanName
 from .settings import POSITIONS_CHOICES, PLAYER_POSITION_CHOICES, POINT_VALUES_HIT, FAN_CATEGORIES_HIT, POINT_VALUES_PITCH, FAN_CATEGORIES_PITCH
 
@@ -35,6 +35,7 @@ class Owner(BaseModel):
 
     def team(self):
         return Team.objects.get(owner_obj=self)
+
 
 class Lineup(BaseModel):
     lineup_team = models.ForeignKey("Team",null=False,on_delete=models.CASCADE)
@@ -150,6 +151,7 @@ class Team(BaseModel):
     abbreviation = models.CharField(max_length=3)
     nickname = models.CharField(max_length=255)
     division = models.CharField(max_length=255, null=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='team')
     owner_obj = models.ForeignKey(
         Owner, on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -192,8 +194,23 @@ class Team(BaseModel):
             lineup.save()
             self.team_lineup = lineup
             print(_,file=sys.stderr)
-        super(Team,self).save(*args,**kwargs)
-    
+            super(Team,self).save(update_fields=['team_lineup'])
+
+
+@receiver(post_save, sender=User)
+def create_team_for_user(sender, instance, created, **kwargs):
+    if created:
+        abbrev = instance.username[:3].upper()
+        Team.objects.get_or_create(
+            user=instance,
+            defaults={
+                'city': instance.username,
+                'abbreviation': abbrev,
+                'nickname': instance.username,
+            },
+        )
+
+
 class Player(BaseModel):
     id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
     name = models.CharField(max_length=255)
@@ -229,7 +246,7 @@ class Player(BaseModel):
     is_owned = models.BooleanField(default=False)
 
     # FANTASY ROSTERS
-    is_mlb_roster = models.BooleanField(default=False)
+    is_fantasy_roster = models.BooleanField(default=False)
     is_aaa_roster = models.BooleanField(default=False)
     is_35man_roster = models.BooleanField(default=False)
 
@@ -543,10 +560,10 @@ class BattingStatLine(BaseModel):
     @transaction.atomic
     def save(self, *args, **kwargs):
         super(BattingStatLine,self).save(*args,**kwargs)
-        super(BattingStatLine,self).refresh_from_db(*args,**kwargs)
+        self.refresh_from_db()
         fan_total = sum([getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
         setattr(self,'FAN_total', fan_total)
-        super(BattingStatLine,self).save(*args,**kwargs)
+        super(BattingStatLine,self).save(update_fields=['FAN_total'])
 
 class SeasonBattingStatLine(BaseModel):
     year = models.IntegerField(blank=False,null=False)
@@ -808,10 +825,10 @@ class PitchingStatLine(BaseModel):
     @transaction.atomic
     def save(self, *args, **kwargs):
         super(PitchingStatLine,self).save(*args,**kwargs)
-        super(PitchingStatLine,self).refresh_from_db(*args,**kwargs)
+        self.refresh_from_db()
         fan_total = sum(filter(None,[getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_PITCH]))
         setattr(self,'FAN_total', fan_total)
-        super(PitchingStatLine,self).save(*args,**kwargs)
+        super(PitchingStatLine,self).save(update_fields=['FAN_total'])
 
 class SeasonPitchingStatLine(BaseModel):
     year = models.IntegerField(blank=False,null=False)
@@ -871,6 +888,19 @@ class SeasonPitchingStatLine(BaseModel):
             return f'{self.year} - {self.player_mlbam_id}'
         return self.name
 
+class RosterSnapshot(BaseModel):
+    """Records which team owned each player on a given date, taken before games start."""
+    date = models.DateField(null=False)
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('date', 'player')
+
+    def __unicode__(self):
+        return f'{self.date} - {self.player.name} ({self.team.abbreviation})'
+
+
 class TeamPitchingStatLine(BaseModel):
     date = models.DateField(null=False)
     games = models.IntegerField(blank=True,null=True)
@@ -926,3 +956,43 @@ class TeamPitchingStatLine(BaseModel):
             return f'{self.date} - {self.team.abbreviation}'
         else:
             return self.date
+
+
+class Draft(BaseModel):
+    year = models.IntegerField(unique=True)
+    status = models.CharField(max_length=20, default='pending')  # pending, active, complete
+    current_pick = models.IntegerField(default=1)
+    order = models.JSONField(default=list)  # list of team abbreviations in draft order
+    rounds = models.IntegerField(default=16)
+
+    def current_team_abbr(self):
+        if not self.order or self.status != 'active':
+            return None
+        n = len(self.order)
+        if n == 0:
+            return None
+        idx = self.current_pick - 1
+        if idx >= self.rounds * n:
+            return None
+        round_num = idx // n
+        pos = idx % n
+        return self.order[pos] if round_num % 2 == 0 else self.order[n - 1 - pos]
+
+    def __unicode__(self):
+        return f'Draft {self.year} ({self.status})'
+
+
+class DraftPick(BaseModel):
+    draft = models.ForeignKey(Draft, on_delete=models.CASCADE, related_name='picks')
+    pick_number = models.IntegerField()
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    player = models.ForeignKey(Player, null=True, blank=True, on_delete=models.SET_NULL)
+    picked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('draft', 'pick_number')
+        ordering = ['pick_number']
+
+    def __unicode__(self):
+        player_name = self.player.name if self.player else 'TBD'
+        return f'Pick {self.pick_number}: {self.team.abbreviation} - {player_name}'

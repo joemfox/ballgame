@@ -15,8 +15,6 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
 import requests
 import ujson as json
 import time
@@ -345,6 +343,9 @@ def is_even(possible_int):
 
 
 def get_sheet(sheet_id, sheet_range):
+    from googleapiclient.discovery import build
+    from google.oauth2 import service_account
+
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
     creds = service_account.Credentials.from_service_account_file(

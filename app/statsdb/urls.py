@@ -22,6 +22,11 @@ router = routers.DefaultRouter()
 router.register(r'users', UserViewSet)
 
 urlpatterns = [
-    path('admin/',admin.site.urls),
+    path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('login/', views.login_view, name='api-login'),
+    path('api/logout/', views.logout_view, name='api-logout'),
+    path('api/session/', views.session_view, name='api-session'),
+    path('api/whoami/', views.whoami_view, name='api-whoami'),
     path('api/', api.urls),
 ]

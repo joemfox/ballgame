@@ -121,13 +121,12 @@ class Command(BaseCommand):
             if(len(player) > 0):
                 statline.player = player.first()
                 try:
-                    fantasy_team = getattr(player.first(),'team_assigned')
+                    snap = models.RosterSnapshot.objects.get(date=date, player=player.first())
+                    statline.fantasy_team = snap.team
+                except models.RosterSnapshot.DoesNotExist:
+                    fantasy_team = getattr(player.first(), 'team_assigned')
                     if fantasy_team is not None:
                         statline.fantasy_team = fantasy_team
-                        # print(f'{player.first().name}: {fantasy_team}')
-                except AttributeError:
-                    # print('fantasy team not found',file=sys.stderr)
-                    pass
 
             statline.player_mlbam_id = batter['personId']
                 
@@ -211,15 +210,14 @@ class Command(BaseCommand):
 
             player = models.Player.objects.all().filter(mlbam_id=pitcher["personId"])
             if(len(player) > 0):
-                setattr(statline,'player',player.first())
+                setattr(statline, 'player', player.first())
                 try:
-                    fantasy_team = getattr(player.first(),'team_assigned')
+                    snap = models.RosterSnapshot.objects.get(date=date, player=player.first())
+                    statline.fantasy_team = snap.team
+                except models.RosterSnapshot.DoesNotExist:
+                    fantasy_team = getattr(player.first(), 'team_assigned')
                     if fantasy_team is not None:
                         statline.fantasy_team = fantasy_team
-                        print(f'{player.first().name}: {fantasy_team}')
-                except AttributeError:
-                    # print('fantasy team not found',file=sys.stderr)
-                    pass
 
             setattr(statline, 'player_mlbam_id', pitcher['personId'])
             setattr(statline, 'last_name', pitcher['name'])

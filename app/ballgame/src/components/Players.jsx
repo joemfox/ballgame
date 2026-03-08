@@ -54,7 +54,7 @@ export default function Players() {
                             <DropdownMenuLabel>Player actions</DropdownMenuLabel>
                             <DropdownMenuItem
                                 onClick={() => {
-                                    axios.post('http://localhost:8000/api/add-player', { id: player.fg_id, team_id: "TST" })
+                                    axios.post('/api/add-player', { id: player.fg_id, team_id: "TST" })
                                         .then(response => {
                                             console.log(response)
                                             table.options.meta?.updateRow(row.index, response.data)
@@ -130,7 +130,7 @@ export default function Players() {
                 params.append('positions', position)
             }
         }
-        axios.get(`http://localhost:8000/api/players`, {
+        axios.get(`/api/players`, {
             params: params
         })
             .then(response => {

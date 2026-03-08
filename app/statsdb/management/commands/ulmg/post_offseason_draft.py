@@ -16,7 +16,7 @@ from ulmg import models
 class Command(BaseCommand):
     def reset_rosters(self):
         print(".... resetting rosters")
-        models.Player.objects.filter(is_mlb_roster=True).update(is_mlb_roster=False)
+        models.Player.objects.filter(is_fantasy_roster=True).update(is_fantasy_roster=False)
         models.Player.objects.filter(is_aaa_roster=True).update(is_aaa_roster=False)
         models.Player.objects.filter(is_1h_c=True).update(is_1h_c=False)
         models.Player.objects.filter(is_1h_p=True).update(is_1h_p=False)

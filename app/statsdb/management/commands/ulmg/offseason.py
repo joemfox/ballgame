@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
     def reset_rosters(self, *args, **options):
         if not options.get("dry_run", None):
-            models.Player.objects.filter(is_mlb_roster=True).update(is_mlb_roster=False)
+            models.Player.objects.filter(is_fantasy_roster=True).update(is_fantasy_roster=False)
             models.Player.objects.filter(is_aaa_roster=True).update(is_aaa_roster=False)
             models.Player.objects.filter(is_35man_roster=True).update(is_35man_roster=False)
             models.Player.objects.filter(is_1h_c=True).update(is_1h_c=False)
