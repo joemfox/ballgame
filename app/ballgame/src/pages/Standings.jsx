@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import axios from 'axios'
 
 export default function Standings() {
@@ -35,17 +36,17 @@ export default function Standings() {
                             <th className="text-left px-3 py-2 font-medium">Team</th>
                             <th className="text-right px-3 py-2 font-medium">Batting</th>
                             <th className="text-right px-3 py-2 font-medium">Pitching</th>
-                            <th className="text-right px-3 py-2 font-medium">Total</th>
+                            <th className="text-right px-3 py-2 font-medium bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {standings.map((row, i) => (
                             <tr key={row.team} className="border-b last:border-0 hover:bg-muted/50">
                                 <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                                <td className="px-3 py-2 font-medium">{row.team}</td>
+                                <td className="px-3 py-2 font-medium"><Link to={`/team/${row.team}`} className="hover:underline">{row.team}</Link></td>
                                 <td className="px-3 py-2 text-right tabular-nums">{row.bat_total.toFixed(1)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{row.pitch_total.toFixed(1)}</td>
-                                <td className="px-3 py-2 text-right tabular-nums font-semibold">{row.total.toFixed(1)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums font-bold bg-orange-50 dark:bg-orange-950/40 text-orange-900 dark:text-orange-200">{row.total.toFixed(1)}</td>
                             </tr>
                         ))}
                     </tbody>

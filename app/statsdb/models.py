@@ -44,9 +44,12 @@ class Lineup(BaseModel):
     lineup_2B = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_2B")
     lineup_SS = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_SS")
     lineup_3B = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_3B")
-    lineup_LF = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_LF")
-    lineup_CF = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_CF")
-    lineup_RF = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_RF")
+    lineup_OF1 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_OF1")
+    lineup_OF2 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_OF2")
+    lineup_OF3 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_OF3")
+    lineup_OF4 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_OF4")
+    lineup_OF5 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_OF5")
+    lineup_UTIL = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_UTIL")
     lineup_SP1 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_SP1")
     lineup_SP2 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_SP2")
     lineup_SP3 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_SP3")
@@ -55,6 +58,7 @@ class Lineup(BaseModel):
     lineup_RP1 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_RP1")
     lineup_RP2 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_RP2")
     lineup_RP3 = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_RP3")
+    lineup_DH = models.ForeignKey("Player", to_field="fg_id",null=True, on_delete=models.SET_NULL, related_name="lineup_DH")
 
     def get_C(self):
         try:
@@ -81,19 +85,34 @@ class Lineup(BaseModel):
             return self.lineup_3B__name
         except:
             return 'None'
-    def get_LF(self):
+    def get_OF1(self):
         try:
-            return self.lineup_LF__name
+            return self.lineup_OF1__name
         except:
             return 'None'
-    def get_CF(self):
+    def get_OF2(self):
         try:
-            return self.lineup_CF__name
+            return self.lineup_OF2__name
         except:
             return 'None'
-    def get_RF(self):
+    def get_OF3(self):
         try:
-            return self.lineup_RF__name
+            return self.lineup_OF3__name
+        except:
+            return 'None'
+    def get_OF4(self):
+        try:
+            return self.lineup_OF4__name
+        except:
+            return 'None'
+    def get_OF5(self):
+        try:
+            return self.lineup_OF5__name
+        except:
+            return 'None'
+    def get_UTIL(self):
+        try:
+            return self.lineup_UTIL__name
         except:
             return 'None'
     def get_SP1(self):
@@ -134,6 +153,11 @@ class Lineup(BaseModel):
     def get_RP3(self):
         try:
             return self.lineup_RP3__name
+        except:
+            return 'None'
+    def get_DH(self):
+        try:
+            return self.lineup_DH__name
         except:
             return 'None'
 
@@ -249,6 +273,9 @@ class Player(BaseModel):
     is_fantasy_roster = models.BooleanField(default=False)
     is_aaa_roster = models.BooleanField(default=False)
     is_35man_roster = models.BooleanField(default=False)
+
+    # LEVEL (from FG roster data: MLB, AAA, AA, A+, A, R, etc.)
+    mlevel = models.CharField(max_length=10, null=True, blank=True)
 
     # FROM LIVE ROSTERS
     is_starter = models.BooleanField(default=False)
@@ -384,7 +411,7 @@ class Membership(BaseModel):
     date_added = models.DateField()
     
 class BattingStatLine(BaseModel):
-    pk_id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
+    pk_id = models.BigAutoField(verbose_name="ID",null=False,primary_key=True)
 
     # id = game_id + player_id
     id = models.CharField(max_length=255,null=False)
@@ -541,6 +568,8 @@ class BattingStatLine(BaseModel):
         db_persist=True
     )
 
+    game_type = models.CharField(max_length=2, null=True, blank=True)
+
     FAN_total = models.FloatField(null=False,default=0.0,blank=False)
 
     def __unicode__(self):
@@ -555,15 +584,15 @@ class BattingStatLine(BaseModel):
             return self.player.name
         return None
 
-    # when row is updated, fetch automatically calculated fields (fantasy scores)
-    # then save the sum as FAN_total
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        super(BattingStatLine,self).save(*args,**kwargs)
-        self.refresh_from_db()
-        fan_total = sum([getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_HIT])
-        setattr(self,'FAN_total', fan_total)
-        super(BattingStatLine,self).save(update_fields=['FAN_total'])
+
+@receiver(post_save, sender=BattingStatLine)
+def compute_batting_fan_total(sender, instance, **kwargs):
+    fan_fields = [f'FAN_{cat}' for cat in FAN_CATEGORIES_HIT]
+    fresh = BattingStatLine.objects.filter(pk=instance.pk).values(*fan_fields).first()
+    if fresh:
+        total = sum(v for v in fresh.values() if v is not None)
+        BattingStatLine.objects.filter(pk=instance.pk).update(FAN_total=total)
+
 
 class SeasonBattingStatLine(BaseModel):
     year = models.IntegerField(blank=False,null=False)
@@ -677,7 +706,7 @@ class TeamBattingStatLine(BaseModel):
             return self.date
 
 class PitchingStatLine(BaseModel):
-    pk_id = models.BigAutoField(auto_created=True,verbose_name="ID",null=False,primary_key=True)
+    pk_id = models.BigAutoField(verbose_name="ID",null=False,primary_key=True)
 
     # id = game_id + player_id
     statline_id = models.CharField(max_length=255,null=False)
@@ -808,8 +837,10 @@ class PitchingStatLine(BaseModel):
         db_persist=True
     )
 
+    game_type = models.CharField(max_length=2, null=True, blank=True)
+
     FAN_total = models.DecimalField(default=0.0, max_digits=10, decimal_places=2, blank=False, null=False)
-    
+
     def player_display(self):
         if self.player:
             return self.player.name
@@ -818,17 +849,17 @@ class PitchingStatLine(BaseModel):
         if self.player:
             return f'{self.date} - {self.player.name}'
         else:
-            return f'{self.date} - {self.last_name}' 
-    
-    # when row is updated, fetch automatically calculated fields (fantasy scores)
-    # then save the sum as FAN_total
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        super(PitchingStatLine,self).save(*args,**kwargs)
-        self.refresh_from_db()
-        fan_total = sum(filter(None,[getattr(self,f'FAN_{cat}') for cat in FAN_CATEGORIES_PITCH]))
-        setattr(self,'FAN_total', fan_total)
-        super(PitchingStatLine,self).save(update_fields=['FAN_total'])
+            return f'{self.date} - {self.last_name}'
+
+
+@receiver(post_save, sender=PitchingStatLine)
+def compute_pitching_fan_total(sender, instance, **kwargs):
+    fan_fields = [f'FAN_{cat}' for cat in FAN_CATEGORIES_PITCH]
+    fresh = PitchingStatLine.objects.filter(pk=instance.pk).values(*fan_fields).first()
+    if fresh:
+        total = sum(v for v in fresh.values() if v is not None)
+        PitchingStatLine.objects.filter(pk=instance.pk).update(FAN_total=total)
+
 
 class SeasonPitchingStatLine(BaseModel):
     year = models.IntegerField(blank=False,null=False)
@@ -914,7 +945,7 @@ class TeamPitchingStatLine(BaseModel):
     bb = models.IntegerField(blank=True,null=True)
     k = models.IntegerField(blank=True,null=True)
     hr = models.IntegerField(blank=True,null=True)
-    bs = models.BooleanField(null=True)
+    bs = models.IntegerField(blank=True,null=True)
     bf = models.IntegerField(blank=True,null=True)
     balks = models.IntegerField(blank=True,null=True)
     hb = models.IntegerField(blank=True,null=True)
@@ -924,10 +955,10 @@ class TeamPitchingStatLine(BaseModel):
     wp = models.IntegerField(blank=True, null=True)
     ir = models.IntegerField(blank=True,null=True)
     irs = models.IntegerField(blank=True,null=True)
-    quality_start = models.BooleanField(null=True)
-    perfect_game = models.BooleanField(null=True)
-    no_hitter= models.BooleanField(null=True)
-    relief_loss = models.BooleanField(null=True)
+    quality_start = models.IntegerField(blank=True,null=True)
+    perfect_game = models.IntegerField(blank=True,null=True)
+    no_hitter = models.IntegerField(blank=True,null=True)
+    relief_loss = models.IntegerField(blank=True,null=True)
     FAN_ip = models.FloatField(blank=True, null=True)
     FAN_h = models.FloatField(blank=True,null=True)
     FAN_r = models.FloatField(blank=True,null=True)

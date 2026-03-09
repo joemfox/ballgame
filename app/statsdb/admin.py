@@ -1,6 +1,82 @@
+import json
+from django import forms
 from django.contrib import admin
+from django.utils.html import format_html, format_html_join
 from .models import Owner, Team, Player, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, Draft, DraftPick
-# Register your models here.
+
+
+class DraftOrderWidget(forms.Widget):
+    """Drag-and-drop reorderable list widget for the Draft.order JSONField."""
+
+    def render(self, name, value, attrs=None, renderer=None):
+        try:
+            if isinstance(value, str):
+                order = json.loads(value)
+            elif isinstance(value, list):
+                order = value
+            else:
+                order = []
+        except (json.JSONDecodeError, TypeError):
+            order = []
+
+        widget_id = (attrs or {}).get('id', f'id_{name}')
+        list_id = f'{widget_id}_list'
+        json_value = json.dumps(order)
+
+        items = format_html_join(
+            '',
+            '<li draggable="true" data-value="{}" style="'
+            'padding:6px 14px;margin:3px 0;background:#f8f8f8;border:1px solid #ccc;'
+            'border-radius:3px;cursor:grab;user-select:none;display:flex;'
+            'align-items:center;gap:8px;max-width:280px;">'
+            '<span style="color:#aaa;font-size:16px;">⠿</span>{}</li>',
+            ((abbr, abbr) for abbr in order),
+        )
+
+        return format_html(
+            '<ul id="{}" style="list-style:none;padding:0;margin:0 0 8px;">{}</ul>'
+            '<input type="hidden" name="{}" id="{}" value="{}">'
+            '<script>'
+            '(function(){{'
+            '  var list=document.getElementById("{list_id}");'
+            '  var inp=document.getElementById("{widget_id}");'
+            '  var dragged;'
+            '  function sync(){{'
+            '    inp.value=JSON.stringify(Array.from(list.querySelectorAll("li")).map(function(li){{return li.dataset.value;}}))'
+            '  }}'
+            '  list.addEventListener("dragstart",function(e){{dragged=e.target;e.target.style.opacity=".4"}});'
+            '  list.addEventListener("dragend",function(e){{e.target.style.opacity="1"}});'
+            '  list.addEventListener("dragover",function(e){{'
+            '    e.preventDefault();'
+            '    var t=e.target.closest("li");'
+            '    if(t&&t!==dragged){{'
+            '      var r=t.getBoundingClientRect();'
+            '      list.insertBefore(dragged,e.clientY<r.top+r.height/2?t:t.nextSibling);'
+            '      sync()'
+            '    }}'
+            '  }});'
+            '}})();'
+            '</script>',
+            list_id, items, name, widget_id, json_value,
+            list_id=list_id, widget_id=widget_id,
+        )
+
+    def value_from_datadict(self, data, files, name):
+        return data.get(name)
+
+
+class DraftForm(forms.ModelForm):
+    class Meta:
+        model = Draft
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['order'].widget = DraftOrderWidget()
+        # Auto-populate order with all teams for new drafts
+        if not self.instance.pk and not self.data:
+            teams = list(Team.objects.values_list('abbreviation', flat=True).order_by('abbreviation'))
+            self.initial['order'] = teams
 
 class BattingStatLineInline(admin.TabularInline):
     model = BattingStatLine
@@ -31,7 +107,8 @@ class LineupAdmin(admin.ModelAdmin):
     list_display = ('lineup_team',)
     raw_id_fields = (
         'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
-        'lineup_LF', 'lineup_CF', 'lineup_RF',
+        'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
+        'lineup_DH', 'lineup_UTIL',
         'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
         'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
     )
@@ -45,6 +122,7 @@ class DraftPickInline(admin.TabularInline):
     raw_id_fields = ('player',)
 
 class DraftAdmin(admin.ModelAdmin):
+    form = DraftForm
     list_display = ('year', 'status', 'current_pick', 'rounds')
     inlines = [DraftPickInline]
 

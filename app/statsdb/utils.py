@@ -281,6 +281,9 @@ def normalize_pos(pos):
     """
     Normalize positions to P, C, IF, OF or IF/OF
     """
+    if not pos:
+        return None
+
     # Any pitcher.
     if "P" in pos.upper():
         return "P"
@@ -296,6 +299,9 @@ def normalize_pos(pos):
     # One of the OF positions.
     if pos.upper() in ["RF", "CF", "LF"]:
         return "OF"
+
+    if pos.upper() in ["DH"]:
+        return "DH"
 
     # Catch folks who are more than one OF and maybe some IF.
     if "F" in pos.upper():

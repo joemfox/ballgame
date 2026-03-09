@@ -7,7 +7,7 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from django.db.models import Q, F, Avg, StdDev, Sum
+from django.db.models import Q, F, Avg, StdDev, Sum, FloatField, Subquery, OuterRef
 from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
@@ -95,9 +95,13 @@ class LineupSchema(Schema):
         lineup_2B: PlayerSchema | None = None
         lineup_SS: PlayerSchema | None = None
         lineup_3B: PlayerSchema | None = None
-        lineup_LF: PlayerSchema | None = None
-        lineup_CF: PlayerSchema | None = None
-        lineup_RF: PlayerSchema | None = None
+        lineup_OF1: PlayerSchema | None = None
+        lineup_OF2: PlayerSchema | None = None
+        lineup_OF3: PlayerSchema | None = None
+        lineup_OF4: PlayerSchema | None = None
+        lineup_OF5: PlayerSchema | None = None
+        lineup_DH: PlayerSchema | None = None
+        lineup_UTIL: PlayerSchema | None = None
         lineup_SP1: PlayerSchema | None = None
         lineup_SP2: PlayerSchema | None = None
         lineup_SP3: PlayerSchema | None = None
@@ -117,9 +121,13 @@ class LineupIn(Schema):
         lineup_2B: str | None = None
         lineup_SS: str | None = None
         lineup_3B: str | None = None
-        lineup_LF: str | None = None
-        lineup_CF: str | None = None
-        lineup_RF: str | None = None
+        lineup_OF1: str | None = None
+        lineup_OF2: str | None = None
+        lineup_OF3: str | None = None
+        lineup_OF4: str | None = None
+        lineup_OF5: str | None = None
+        lineup_DH: str | None = None
+        lineup_UTIL: str | None = None
         lineup_SP1: str | None = None
         lineup_SP2: str | None = None
         lineup_SP3: str | None = None
@@ -133,6 +141,26 @@ class BattingStatlineSchema(ModelSchema):
     class Meta:
         model = BattingStatLine
         fields = '__all__'
+
+import datetime as _dt
+
+class StatlinePerformanceSchema(Schema):
+    date: str
+    player_name: str | None = None
+    type: str  # 'H' or 'P'
+    FAN_total: float | None = None
+    h: int | None = None
+    hr: int | None = None
+    r: int | None = None
+    rbi: int | None = None
+    sb: int | None = None
+    k: int | None = None
+    ip: float | None = None
+    er: int | None = None
+
+class PaginatedStatlinePerformanceSchema(Schema):
+    results: List[StatlinePerformanceSchema]
+    count: int
 
 class SeasonBattingStatLineSchema(Schema):
     outs: int | None = None
@@ -179,6 +207,7 @@ class SeasonBattingStatLineSchema(Schema):
     positions: List[str] | None = None
     year: int | None = None
     team_assigned: str | None = None  # team abbreviation or None if unowned
+    mlevel: str | None = None
 
 
 class PaginatedSeasonBattingStatLineSchema(Schema):
@@ -236,6 +265,7 @@ class SeasonPitchingStatLineSchema(Schema):
     positions: List[str] | None = None
     year: int | None = None
     team_assigned: str | None = None  # team abbreviation or None if unowned
+    mlevel: str | None = None
 
 class PaginatedSeasonPitchingStatLineSchema(Schema):
     results: List[SeasonPitchingStatLineSchema]
@@ -244,21 +274,28 @@ class PaginatedSeasonPitchingStatLineSchema(Schema):
     stddev_total: float | None = None
     sum_total: float | None = None
 
+OF_SLOTS = ['lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5']
+HITTER_SLOTS = ['lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B'] + OF_SLOTS + ['lineup_DH', 'lineup_UTIL']
+
 POSITION_SLOTS = {
     'C': ['lineup_C'],
     '1B': ['lineup_1B'],
     '2B': ['lineup_2B'],
     'SS': ['lineup_SS'],
     '3B': ['lineup_3B'],
-    'LF': ['lineup_LF'],
-    'CF': ['lineup_CF'],
-    'RF': ['lineup_RF'],
-    'OF': ['lineup_LF', 'lineup_CF', 'lineup_RF'],
+    'LF': OF_SLOTS,
+    'CF': OF_SLOTS,
+    'RF': OF_SLOTS,
+    'OF': OF_SLOTS,
     'IF': ['lineup_2B', 'lineup_SS', 'lineup_3B'],
     'IN': ['lineup_2B', 'lineup_SS', 'lineup_3B'],
+    'DH': ['lineup_DH'],
     'SP': ['lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5'],
     'RP': ['lineup_RP1', 'lineup_RP2', 'lineup_RP3'],
 }
+
+# Hitter positions that can also fill the DH slot
+HITTER_POSITIONS = {'C', 'IF', 'OF', 'IF-OF', 'IN', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'DH'}
 
 
 class LineupAssignSchema(Schema):
@@ -348,48 +385,151 @@ class MyAPIController:
         }
     
     @api.get("/players/{year}/hit", response=PaginatedSeasonBattingStatLineSchema)
-    def player_seasons_hit(request, year:str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
-        queryset = SeasonBattingStatLine.objects.all(
-            ).filter(
-                year=year
-            ).prefetch_related(
-                'player',
-            ).annotate(player_name=F('player__name')).annotate(positions=F('player__positions')).annotate(fg_id=F('player__fg_id')).annotate(team_assigned=F('player__team_assigned__abbreviation'))
-        queryset = filters.filter(queryset)
-        agg = queryset.filter(FAN_total__gte=0.5).aggregate(avg_total=Avg('FAN_total'), stddev_total=StdDev('FAN_total'), sum_total=Sum('FAN_total'))
+    def player_seasons_hit(request, year: str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
+        HIT_FIELDS = [
+            'outs', 'bb', 'triples', 'h', 'cycle', 'doubles', 'outfield_assists',
+            'cs', 'e', 'gidp', 'hr', 'r', 'lob', 'po', 'rl2o', 'rbi', 'k_looking', 'k', 'sb',
+            'FAN_outs', 'FAN_bb', 'FAN_triples', 'FAN_h', 'FAN_cycle', 'FAN_doubles',
+            'FAN_outfield_assists', 'FAN_cs', 'FAN_e', 'FAN_gidp', 'FAN_hr', 'FAN_r',
+            'FAN_lob', 'FAN_po', 'FAN_rl2o', 'FAN_rbi', 'FAN_k_looking', 'FAN_k', 'FAN_sb', 'FAN_total',
+        ]
+        stat_sq = SeasonBattingStatLine.objects.filter(player=OuterRef('pk'), year=year)
+        queryset = Player.objects.exclude(position='P').select_related('team_assigned').annotate(
+            FAN_total=Subquery(stat_sq.values('FAN_total')[:1], output_field=FloatField()),
+        )
+        # Apply filters on Player fields
+        if filters.search:
+            queryset = queryset.filter(name__icontains=filters.search)
+        if filters.positions:
+            pos_q = Q(*[Q(positions__icontains=p) for p in filters.positions], _connector=Q.OR)
+            queryset = queryset.filter(pos_q)
+        if filters.available is True:
+            queryset = queryset.filter(team_assigned__isnull=True)
+        elif filters.team:
+            queryset = queryset.filter(team_assigned__abbreviation=filters.team)
+        if filters.ordering:
+            sort_field = filters.ordering.lstrip('-')
+            desc = filters.ordering.startswith('-')
+            player_fields = {f.name for f in Player._meta.get_fields()}
+            if sort_field not in player_fields and sort_field != 'FAN_total':
+                extra_sq = SeasonBattingStatLine.objects.filter(player=OuterRef('pk'), year=year)
+                queryset = queryset.annotate(
+                    **{sort_field: Subquery(extra_sq.values(sort_field)[:1], output_field=FloatField())}
+                )
+            f = F(sort_field)
+            queryset = queryset.order_by(f.desc(nulls_last=True) if desc else f.asc(nulls_last=True))
+        else:
+            queryset = queryset.order_by(F('FAN_total').desc(nulls_last=True))
+
+        # Aggregate from SeasonBattingStatLine for stats display
+        agg_filter = Q(year=year, FAN_total__gte=0.5)
+        if filters.team:
+            agg_filter &= Q(player__team_assigned__abbreviation=filters.team)
+        agg = SeasonBattingStatLine.objects.filter(agg_filter).aggregate(
+            avg_total=Avg('FAN_total'), stddev_total=StdDev('FAN_total'), sum_total=Sum('FAN_total')
+        )
 
         paginator = Paginator(queryset, per_page=page_size)
         if page < 1 or page > paginator.num_pages:
             return api.create_response(status=404, content={"detail": "Page does not exist."})
 
-        paginated_data = paginator.page(page)
+        paginated_players = paginator.page(page)
+        player_pks = [p.pk for p in paginated_players]
+        stat_map = {s.player_id: s for s in SeasonBattingStatLine.objects.filter(player_id__in=player_pks, year=year)}
+
+        results = []
+        for player in paginated_players:
+            stat = stat_map.get(player.pk)
+            entry = {
+                'player_name': player.name,
+                'fg_id': player.fg_id,
+                'positions': player.positions or [],
+                'year': int(year),
+                'team_assigned': player.team_assigned.abbreviation if player.team_assigned else None,
+                'mlevel': player.mlevel,
+            }
+            if stat:
+                for field in HIT_FIELDS:
+                    entry[field] = getattr(stat, field, None)
+            results.append(entry)
 
         return {
-            "results": paginated_data,
+            "results": results,
             "count": paginator.count,
             "avg_total": agg['avg_total'],
             "stddev_total": agg['stddev_total'],
             "sum_total": float(agg['sum_total']) if agg['sum_total'] is not None else None,
         }
+
     @api.get("/players/{year}/pitch", response=PaginatedSeasonPitchingStatLineSchema)
-    def player_seasons_pitch(request, year:str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
-        queryset = SeasonPitchingStatLine.objects.all(
-            ).filter(
-                year=year
-            ).prefetch_related(
-                'player',
-            ).annotate(player_name=F('player__name')).annotate(positions=F('player__positions')).annotate(fg_id=F('player__fg_id')).annotate(team_assigned=F('player__team_assigned__abbreviation'))
-        queryset = filters.filter(queryset)
-        agg = queryset.filter(FAN_total__gte=0.5).aggregate(avg_total=Avg('FAN_total'), stddev_total=StdDev('FAN_total'), sum_total=Sum('FAN_total'))
+    def player_seasons_pitch(request, year: str, page: int = 1, page_size: int = 50, filters: PlayerFilterSchema = Query(PlayerFilterSchema())):
+        PITCH_FIELDS = [
+            'ip', 'h', 'er', 'bb', 'k', 'hr', 'bs', 'balks', 'hb', 'bra', 'dpi', 'e', 'wp',
+            'ir', 'irs', 'perfect_game', 'no_hitter', 'relief_loss',
+            'FAN_ip', 'FAN_h', 'FAN_er', 'FAN_bb', 'FAN_k', 'FAN_hr', 'FAN_bs', 'FAN_balks',
+            'FAN_hb', 'FAN_bra', 'FAN_dpi', 'FAN_e', 'FAN_wp', 'FAN_ir', 'FAN_irs',
+            'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss', 'FAN_total',
+        ]
+        stat_sq = SeasonPitchingStatLine.objects.filter(player=OuterRef('pk'), year=year)
+        queryset = Player.objects.filter(position='P').select_related('team_assigned').annotate(
+            FAN_total=Subquery(stat_sq.values('FAN_total')[:1], output_field=FloatField()),
+        )
+        if filters.search:
+            queryset = queryset.filter(name__icontains=filters.search)
+        if filters.positions:
+            pos_q = Q(*[Q(positions__icontains=p) for p in filters.positions], _connector=Q.OR)
+            queryset = queryset.filter(pos_q)
+        if filters.available is True:
+            queryset = queryset.filter(team_assigned__isnull=True)
+        elif filters.team:
+            queryset = queryset.filter(team_assigned__abbreviation=filters.team)
+        if filters.ordering:
+            sort_field = filters.ordering.lstrip('-')
+            desc = filters.ordering.startswith('-')
+            player_fields = {f.name for f in Player._meta.get_fields()}
+            if sort_field not in player_fields and sort_field != 'FAN_total':
+                extra_sq = SeasonPitchingStatLine.objects.filter(player=OuterRef('pk'), year=year)
+                queryset = queryset.annotate(
+                    **{sort_field: Subquery(extra_sq.values(sort_field)[:1], output_field=FloatField())}
+                )
+            f = F(sort_field)
+            queryset = queryset.order_by(f.desc(nulls_last=True) if desc else f.asc(nulls_last=True))
+        else:
+            queryset = queryset.order_by(F('FAN_total').desc(nulls_last=True))
+
+        agg_filter = Q(year=year, FAN_total__gte=0.5)
+        if filters.team:
+            agg_filter &= Q(player__team_assigned__abbreviation=filters.team)
+        agg = SeasonPitchingStatLine.objects.filter(agg_filter).aggregate(
+            avg_total=Avg('FAN_total'), stddev_total=StdDev('FAN_total'), sum_total=Sum('FAN_total')
+        )
 
         paginator = Paginator(queryset, per_page=page_size)
         if page < 1 or page > paginator.num_pages:
             return api.create_response(status=404, content={"detail": "Page does not exist."})
 
-        paginated_data = paginator.page(page)
+        paginated_players = paginator.page(page)
+        player_pks = [p.pk for p in paginated_players]
+        stat_map = {s.player_id: s for s in SeasonPitchingStatLine.objects.filter(player_id__in=player_pks, year=year)}
+
+        results = []
+        for player in paginated_players:
+            stat = stat_map.get(player.pk)
+            entry = {
+                'player_name': player.name,
+                'fg_id': player.fg_id,
+                'positions': player.positions or [],
+                'year': int(year),
+                'team_assigned': player.team_assigned.abbreviation if player.team_assigned else None,
+                'mlevel': player.mlevel,
+            }
+            if stat:
+                for field in PITCH_FIELDS:
+                    entry[field] = getattr(stat, field, None)
+            results.append(entry)
 
         return {
-            "results": paginated_data,
+            "results": results,
             "count": paginator.count,
             "avg_total": agg['avg_total'],
             "stddev_total": agg['stddev_total'],
@@ -398,18 +538,87 @@ class MyAPIController:
 
 
 
+
+    @api.get("/players/{year}/hit/column-ranges")
+    def hit_column_ranges(request, year: str):
+        from django.db.models import Min, Max
+        FIELDS = [
+            'outs', 'bb', 'triples', 'h', 'cycle', 'doubles', 'outfield_assists',
+            'cs', 'e', 'gidp', 'hr', 'r', 'lob', 'po', 'rl2o', 'rbi', 'k_looking', 'k', 'sb',
+            'FAN_outs', 'FAN_bb', 'FAN_triples', 'FAN_h', 'FAN_cycle', 'FAN_doubles',
+            'FAN_outfield_assists', 'FAN_cs', 'FAN_e', 'FAN_gidp', 'FAN_hr', 'FAN_r',
+            'FAN_lob', 'FAN_po', 'FAN_rl2o', 'FAN_rbi', 'FAN_k_looking', 'FAN_k', 'FAN_sb',
+        ]
+        agg = SeasonBattingStatLine.objects.filter(year=year).aggregate(
+            **{f'{f}__min': Min(f) for f in FIELDS},
+            **{f'{f}__max': Max(f) for f in FIELDS},
+        )
+        return {f: {'min': agg.get(f'{f}__min'), 'max': agg.get(f'{f}__max')} for f in FIELDS}
+
+    @api.get("/players/{year}/pitch/column-ranges")
+    def pitch_column_ranges(request, year: str):
+        from django.db.models import Min, Max
+        FIELDS = [
+            'ip', 'h', 'er', 'bb', 'k', 'hr', 'bs', 'balks', 'hb', 'bra', 'dpi', 'e', 'wp',
+            'ir', 'irs', 'perfect_game', 'no_hitter', 'relief_loss',
+            'FAN_ip', 'FAN_h', 'FAN_er', 'FAN_bb', 'FAN_k', 'FAN_hr', 'FAN_bs', 'FAN_balks',
+            'FAN_hb', 'FAN_bra', 'FAN_dpi', 'FAN_e', 'FAN_wp', 'FAN_ir', 'FAN_irs',
+            'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss',
+        ]
+        agg = SeasonPitchingStatLine.objects.filter(year=year).aggregate(
+            **{f'{f}__min': Min(f) for f in FIELDS},
+            **{f'{f}__max': Max(f) for f in FIELDS},
+        )
+        return {f: {'min': agg.get(f'{f}__min'), 'max': agg.get(f'{f}__max')} for f in FIELDS}
 
     @api.get("statlines/batting", response=List[BattingStatlineSchema])
-    def statlines_batting(request, playerid: str):
+    def statlines_batting(request, playerid: str, year: str = None):
         player = get_object_or_404(Player.objects.all(), fg_id=playerid)
-        batting_lines = BattingStatLine.objects.all().filter(player=player)
-        return batting_lines
+        qs = BattingStatLine.objects.filter(player=player).filter(Q(game_type='R') | Q(game_type__isnull=True))
+        if year:
+            qs = qs.filter(date__year=year)
+        return qs.order_by('date')
 
-    @api.get("statlines/pitching",response=List[PitchingStatlineSchema])
-    def statlines_pitching(request, playerid: str):
+    @api.get("statlines/pitching", response=List[PitchingStatlineSchema])
+    def statlines_pitching(request, playerid: str, year: str = None):
         player = get_object_or_404(Player.objects.all(), fg_id=playerid)
-        pitching_lines = PitchingStatLine.objects.all().filter(player=player)
-        return pitching_lines
+        qs = PitchingStatLine.objects.filter(player=player).filter(Q(game_type='R') | Q(game_type__isnull=True))
+        if year:
+            qs = qs.filter(date__year=year)
+        return qs.order_by('date')
+
+    @api.get("statlines/team", response=PaginatedStatlinePerformanceSchema)
+    def statlines_team(request, team: str, year: str, page: int = 1):
+        PAGE_SIZE = 5
+        team_obj = get_object_or_404(Team, abbreviation=team)
+        rs_filter = Q(game_type='R') | Q(game_type__isnull=True)
+
+        bat = list(BattingStatLine.objects.filter(
+            fantasy_team=team_obj, date__year=year
+        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'h', 'hr', 'r', 'rbi', 'sb', 'k'))
+        for row in bat:
+            row['type'] = 'H'
+            row['player_name'] = row.pop('player__name')
+            row['date'] = str(row['date'])
+            row['ip'] = None
+            row['er'] = None
+
+        pitch = list(PitchingStatLine.objects.filter(
+            fantasy_team=team_obj, date__year=year
+        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'ip', 'k', 'er', 'hr', 'h'))
+        for row in pitch:
+            row['type'] = 'P'
+            row['player_name'] = row.pop('player__name')
+            row['date'] = str(row['date'])
+            row['r'] = None
+            row['rbi'] = None
+            row['sb'] = None
+            row['ip'] = float(row['ip']) if row['ip'] is not None else None
+
+        combined = sorted(bat + pitch, key=lambda x: x['FAN_total'] or 0, reverse=True)
+        count = len(combined)
+        start = (page - 1) * PAGE_SIZE
+        return {'results': combined[start:start + PAGE_SIZE], 'count': count}
 
     @api.get("/season")
     def current_season(request):
@@ -477,9 +686,7 @@ class MyAPIController:
         # Remove from lineup if present
         try:
             lineup = Lineup.objects.get(lineup_team=team)
-            lineup_fields = [
-                'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
-                'lineup_LF', 'lineup_CF', 'lineup_RF',
+            lineup_fields = HITTER_SLOTS + [
                 'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
                 'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
             ]
@@ -517,6 +724,12 @@ class MyAPIController:
                     break
             if open_slot:
                 break
+        # Any hitter can fill UTIL as a fallback
+        if not open_slot and any(p in HITTER_POSITIONS for p in (player.positions or [])):
+            for slot in ['lineup_DH', 'lineup_UTIL']:
+                if getattr(lineup, slot) is None:
+                    open_slot = slot
+                    break
         if not open_slot:
             return api.create_response(request, {"detail": "No open lineup slot for this player"}, status=409)
         setattr(lineup, open_slot, player)
@@ -539,6 +752,8 @@ class MyAPIController:
             return api.create_response(request, {"detail": "Player is on another team's roster"}, status=409)
         if not hasattr(Lineup(), payload.slot):
             return api.create_response(request, {"detail": "Invalid slot"}, status=400)
+        if player.position == 'DH' and payload.slot != 'lineup_DH':
+            return api.create_response(request, {"detail": "DH players can only be placed in the DH slot"}, status=400)
         lineup, _ = Lineup.objects.get_or_create(lineup_team=team)
         setattr(lineup, payload.slot, player)
         lineup.save()
@@ -553,6 +768,82 @@ class MyAPIController:
         team_obj = get_object_or_404(Team.objects.all(),abbreviation=team)
         lineup = get_object_or_404(Lineup.objects.all(),lineup_team=team_obj)
         return lineup
+
+    @api.get("/lineup/yesterday")
+    def lineup_yesterday(request, team: str):
+        yesterday = _dt.date.today() - _dt.timedelta(days=1)
+        team_obj = get_object_or_404(Team, abbreviation=team)
+        lineup = get_object_or_404(Lineup, lineup_team=team_obj)
+        rs_filter = Q(game_type='R') | Q(game_type__isnull=True)
+
+        BAT_FIELDS = [
+            'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
+            'lob', 'sb', 'cs', 'e', 'k_looking', 'rl2o', 'cycle', 'gidp', 'po', 'outfield_assists',
+            'FAN_total', 'FAN_r', 'FAN_h', 'FAN_doubles', 'FAN_triples', 'FAN_hr',
+            'FAN_rbi', 'FAN_sb', 'FAN_cs', 'FAN_bb', 'FAN_k', 'FAN_k_looking',
+            'FAN_lob', 'FAN_gidp', 'FAN_e', 'FAN_outs', 'FAN_po', 'FAN_rl2o',
+            'FAN_outfield_assists', 'FAN_cycle',
+        ]
+        PIT_FIELDS = [
+            'ip', 'h', 'er', 'bb', 'k', 'hr', 'bs', 'hb', 'wp', 'balks', 'ir', 'irs',
+            'e', 'dpi', 'bra', 'perfect_game', 'no_hitter', 'relief_loss',
+            'FAN_total', 'FAN_ip', 'FAN_h', 'FAN_er', 'FAN_bb', 'FAN_k', 'FAN_hr',
+            'FAN_bs', 'FAN_hb', 'FAN_wp', 'FAN_balks', 'FAN_ir', 'FAN_irs', 'FAN_e',
+            'FAN_dpi', 'FAN_bra', 'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss',
+        ]
+
+        def serialize(stat, fields):
+            result = {}
+            for f in fields:
+                v = getattr(stat, f, None)
+                result[f] = float(v) if hasattr(v, '__float__') and v is not None else v
+            return result
+
+        hitter_slots = [
+            'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
+            'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
+            'lineup_DH', 'lineup_UTIL',
+        ]
+        pitcher_slots = [
+            'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
+            'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
+        ]
+
+        hitters = []
+        for slot in hitter_slots:
+            player = getattr(lineup, slot)
+            if not player:
+                continue
+            row = {
+                'player_name': player.name,
+                'fg_id': player.fg_id,
+                'slot': slot.replace('lineup_', ''),
+                'positions': list(player.positions) if player.positions else [],
+                'team_assigned': team_obj.abbreviation,
+            }
+            stat = BattingStatLine.objects.filter(player=player, date=yesterday).filter(rs_filter).first()
+            if stat:
+                row.update(serialize(stat, BAT_FIELDS))
+            hitters.append(row)
+
+        pitchers = []
+        for slot in pitcher_slots:
+            player = getattr(lineup, slot)
+            if not player:
+                continue
+            row = {
+                'player_name': player.name,
+                'fg_id': player.fg_id,
+                'slot': slot.replace('lineup_', ''),
+                'positions': list(player.positions) if player.positions else [],
+                'team_assigned': team_obj.abbreviation,
+            }
+            stat = PitchingStatLine.objects.filter(player=player, date=yesterday).filter(rs_filter).first()
+            if stat:
+                row.update(serialize(stat, PIT_FIELDS))
+            pitchers.append(row)
+
+        return {'hitters': hitters, 'pitchers': pitchers, 'date': str(yesterday)}
 
     @api.post('/lineup')
     def updateLineup(request, payload: LineupIn):

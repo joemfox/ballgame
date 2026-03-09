@@ -146,6 +146,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost').split()
 
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
@@ -246,6 +254,7 @@ THIRDBASE = "3B"
 LEFTFIELD = "LF"
 CENTERFIELD = "CF"
 RIGHTFIELD = "RF"
+DH = "DH"
 INFIELD_OUTFIELD = "IF-OF"
 PITCHER_OF = "OF-P"
 PITCHER_IF = "IF-P"
@@ -253,6 +262,8 @@ PLAYER_POSITION_CHOICES = (
     (PITCHER, "Pitcher"),
     (INFIELD, "Infield"),
     (OUTFIELD, "Outfield"),
+    (CATCHER, "Catcher"),
+    (DH, "DH"),
     (INFIELD_OUTFIELD, "IF-OF"),
     (PITCHER_OF, "OF-P"),
     (PITCHER_IF, "IF-P"),
@@ -268,6 +279,7 @@ POSITIONS_CHOICES = (
     (LEFTFIELD, "Left field"),
     (CENTERFIELD, "Center field"),
     (RIGHTFIELD, "Right field"),
+    (DH, "Designated hitter"),
 )
 
 # all categories should be listed here
@@ -295,20 +307,23 @@ FAN_CATEGORIES_HIT = [
 ]
 
 POINT_VALUES_HIT = {
-    "outs_bp_1":4,  # breakpoint
-    "outs_max_1": 0.75, # lower value
-    "outs_min_1":1, # higher value
-    "BB":-1,
+    "outs_bp_1": 3,     # first breakpoint (was 4)
+    "outs_bp_2": 4,     # second breakpoint; 4th out gets a bonus
+    "outs_max_1": 0.75, # per-out rate up to 3 outs
+    "outs_max_2": 1.75, # per-out rate for the 4th out (+1 bonus)
+    "outs_min_1": 1,    # kept for old migration compat
+    "outs_min_2": 1.00, # per-out rate for 5th+ outs
+    "BB":-.75,
     'triples':-3,
     'hits_bp_1': 1,
     'hits_bp_2': 2,
-    'hits_max_1':-1,
-    'hits_max_2':-1.25,
-    'hits_min_2':-1.5,
+    'hits_max_1': -1.50,  # was -0.75
+    'hits_max_2': -2.00,  # was -1.00
+    'hits_min_2': -2.50,  # was -1.25
     'cycle':-40,
     'doubles':-2,
     'outfield_assists':-1,
-    'cs':2,
+    'cs':5,
     'e':2,
     'gidp':2,
     'hr_bp_1':1,
@@ -328,9 +343,12 @@ POINT_VALUES_HIT = {
     'k_looking':0.5,
     'k_bp_1':2,
     'k_bp_2':3,
+    'k_bp_3':4,
     'k_max_1':0.5,
-    'k_max_2':1,
-    'k_min_2':4,
+    'k_max_2':2,
+    'k_max_3':4,
+    'k_min_2':6,  # kept for old migration compat; superseded by 0036
+    'k_min_3':6,
     'sb':-3,
 }
 

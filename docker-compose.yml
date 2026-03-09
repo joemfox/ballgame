@@ -28,17 +28,34 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost} localhost 127.0.0.1
       DJANGO_DEBUG: "False"
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost}
-    ports:
-      - "8000:8000"
+    volumes:
+      - app_data:/app/data
     restart: unless-stopped
 
   frontend:
     build: ./app/ballgame
-    ports:
-      - "80:80"
     depends_on:
       - django
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  app_data:
+  caddy_data:
+  caddy_config:

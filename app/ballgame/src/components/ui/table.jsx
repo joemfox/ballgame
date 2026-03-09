@@ -5,7 +5,7 @@ import { ItemTypes } from '@/App'
 import { useDrag } from 'react-dnd'
 
 const Table = React.forwardRef(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  <div className="relative w-full">
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}

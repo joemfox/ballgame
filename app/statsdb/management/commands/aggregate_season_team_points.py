@@ -22,28 +22,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         year = options["year"]
-        workers = options["workers"]
 
         start_date = date(int(year), 1, 1)
         end_date = date(int(year) + 1, 1, 1)
         day_strings = [d.strftime(settings.DATEFORMAT)
                        for d in daterange(start_date, end_date)]
         ncols = shutil.get_terminal_size().columns
-
-        def process_day(day_str):
-            close_old_connections()
-            call_command('realtime_update', day_str, True, no_progress=True)
-
-        with tqdm(total=len(day_strings), desc="Fetching", unit="day",
-                  position=0, leave=True, ncols=ncols) as pbar:
-            with ThreadPoolExecutor(max_workers=workers) as executor:
-                futures = {executor.submit(process_day, d): d for d in day_strings}
-                for future in as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as e:
-                        tqdm.write(f"Error: {e}")
-                    pbar.update(1)
 
         with tqdm(total=len(day_strings), desc="Aggregating teams", unit="day",
                   position=0, leave=True, ncols=ncols) as pbar:

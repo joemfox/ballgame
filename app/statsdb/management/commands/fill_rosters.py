@@ -1,37 +1,59 @@
 """
-Randomly distribute unowned MLB players across all teams.
+Fill lineup slots with randomly assigned unowned players.
 
 Usage:
-    python manage.py fill_rosters                 # 15 players per team
-    python manage.py fill_rosters --per-team 20   # 20 players per team
-    python manage.py fill_rosters --clear         # clear rosters first, then fill
+    python manage.py fill_rosters              # fill all empty slots for all teams
+    python manage.py fill_rosters --clear      # clear rosters first, then fill
+    python manage.py fill_rosters --mlb-only   # only use is_mlb=True players
 """
 import random
 from django.core.management.base import BaseCommand
 from statsdb.models import Player, Team, Lineup
 
+# Maps each lineup slot to the position values that can fill it.
+# Matches positions stored in Player.positions (ArrayField).
+SLOT_POSITIONS = {
+    'lineup_C':    ['C'],
+    'lineup_1B':   ['1B'],
+    'lineup_2B':   ['2B', 'IF', 'IN'],
+    'lineup_SS':   ['SS', 'IF', 'IN'],
+    'lineup_3B':   ['3B', 'IF', 'IN'],
+    'lineup_OF1':  ['LF', 'CF', 'RF', 'OF'],
+    'lineup_OF2':  ['LF', 'CF', 'RF', 'OF'],
+    'lineup_OF3':  ['LF', 'CF', 'RF', 'OF'],
+    'lineup_OF4':  ['LF', 'CF', 'RF', 'OF'],
+    'lineup_OF5':  ['LF', 'CF', 'RF', 'OF'],
+    'lineup_DH':   ['DH'],
+    'lineup_UTIL': ['C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'OF', 'IF', 'IN', 'DH'],
+    'lineup_SP1':  ['SP'],
+    'lineup_SP2':  ['SP'],
+    'lineup_SP3':  ['SP'],
+    'lineup_SP4':  ['SP'],
+    'lineup_SP5':  ['SP'],
+    'lineup_RP1':  ['RP'],
+    'lineup_RP2':  ['RP'],
+    'lineup_RP3':  ['RP'],
+}
+
 
 class Command(BaseCommand):
-    help = 'Randomly distribute unowned MLB players across all teams'
+    help = 'Fill lineup slots with randomly assigned unowned players'
 
     def add_arguments(self, parser):
-        parser.add_argument('--per-team', type=int, default=15,
-                            help='Number of players per team (default: 15)')
         parser.add_argument('--clear', action='store_true',
                             help='Clear all existing roster assignments first')
         parser.add_argument('--mlb-only', action='store_true',
-                            help='Only assign players with is_mlb=True (requires update_status_from_fg_rosters to have been run)')
+                            help='Only assign players with is_mlb=True')
 
     def handle(self, *args, **options):
-        per_team = options['per_team']
-
         if options['clear']:
-            # Clear all roster assignments and lineup slots
             Player.objects.update(team_assigned=None, is_owned=False)
             Lineup.objects.update(
                 lineup_C=None, lineup_1B=None, lineup_2B=None,
-                lineup_SS=None, lineup_3B=None, lineup_LF=None,
-                lineup_CF=None, lineup_RF=None,
+                lineup_SS=None, lineup_3B=None,
+                lineup_OF1=None, lineup_OF2=None, lineup_OF3=None,
+                lineup_OF4=None, lineup_OF5=None,
+                lineup_DH=None, lineup_UTIL=None,
                 lineup_SP1=None, lineup_SP2=None, lineup_SP3=None,
                 lineup_SP4=None, lineup_SP5=None,
                 lineup_RP1=None, lineup_RP2=None, lineup_RP3=None,
@@ -43,28 +65,33 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('No teams found.'))
             return
 
-        # Fill each team up to per_team, pulling from unowned MLB players
         total_assigned = 0
         for team in teams:
-            current = Player.objects.filter(team_assigned=team).count()
-            needed = per_team - current
-            if needed <= 0:
-                continue
+            lineup, _ = Lineup.objects.get_or_create(lineup_team=team)
+            lineup_dirty = False
 
-            qs = Player.objects.filter(team_assigned=None)
-            if options['mlb_only']:
-                qs = qs.filter(is_mlb=True)
-            available = list(qs)
-            random.shuffle(available)
-            to_assign = available[:needed]
+            for slot, positions in SLOT_POSITIONS.items():
+                if getattr(lineup, slot + '_id') is not None:
+                    continue  # slot already filled
 
-            for player in to_assign:
+                qs = Player.objects.filter(team_assigned=None, positions__overlap=positions)
+                if options['mlb_only']:
+                    qs = qs.filter(is_mlb=True)
+                candidates = list(qs)
+                if not candidates:
+                    continue
+
+                player = random.choice(candidates)
+                setattr(lineup, slot, player)
                 player.team_assigned = team
                 player.is_owned = True
                 player.save()
+                lineup_dirty = True
                 total_assigned += 1
 
+            if lineup_dirty:
+                lineup.save()
+
         self.stdout.write(self.style.SUCCESS(
-            f'Assigned {total_assigned} players across {len(teams)} teams '
-            f'(target: {per_team} per team).'
+            f'Assigned {total_assigned} players across {len(teams)} teams.'
         ))

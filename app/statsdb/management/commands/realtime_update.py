@@ -1,11 +1,13 @@
 import sys
-import json
+import re
+import shutil
 from decimal import Decimal
 
 from bs4 import BeautifulSoup
 from dateutil.parser import parse
 from django.apps import apps
-from django.db import connection
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from django.db import connection, transaction, close_old_connections
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
@@ -25,21 +27,37 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("date", type=str)
-        parser.add_argument("terminal_height", type=int,default=32,)
-        parser.add_argument("terminal_width", type=int, default=40)
-        parser.add_argument("overwrite",type=bool, default=True)
-        
+        parser.add_argument("overwrite", type=bool, default=True)
+        parser.add_argument("--no-progress", action="store_true", default=False)
+        parser.add_argument("--workers", type=int, default=8,
+                            help="Parallel game workers (default: 8)")
+
     def handle(self, *args, **options):
         date = options['date']
-        terminal_height = options['terminal_height']
-        terminal_width = options['terminal_width']
         overwrite = options['overwrite']
+        workers = options['workers']
         self.games = self.get_games(date)
+        if not self.games:
+            return
 
+        def load_one(args):
+            close_old_connections()
+            self.load_game(*args)
 
-        for (date, game_id) in tqdm(self.games, desc="Loading games", ncols=terminal_width, position=terminal_height - 16, total=len(self.games), unit="game", leave=False):
-            self.load_game(date, game_id, overwrite)
-            print(f"\033[F\033[K", end="")
+        ncols = shutil.get_terminal_size().columns
+        with tqdm(total=len(self.games), desc="Games", ncols=ncols, position=1,
+                  unit="game", leave=False, disable=options['no_progress']) as pbar:
+            with ThreadPoolExecutor(max_workers=min(workers, len(self.games))) as executor:
+                futures = {
+                    executor.submit(load_one, (d, g, overwrite, gt)): g
+                    for (d, g, gt) in self.games
+                }
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        tqdm.write(f"Error on game {futures[future]}: {e}")
+                    pbar.update(1)
 
     def get_games(self,date):
         pacific = pytz.timezone("US/Pacific")
@@ -52,7 +70,8 @@ class Command(BaseCommand):
 
         today = now.strftime("%m/%d/%Y")
         sched = [
-            (now,d["game_id"]) for d in statsapi.schedule(start_date=today, end_date=today)
+            (now, d["game_id"], d.get("game_type", "R"))
+            for d in statsapi.schedule(start_date=today, end_date=today)
         ]
         return sched
     
@@ -63,7 +82,10 @@ class Command(BaseCommand):
         else: return 0
 
 
-    def load_game(self, date, game_id, overwrite):
+
+
+    @transaction.atomic
+    def load_game(self, date, game_id, overwrite, game_type='R'):
         try:
             box = statsapi.boxscore_data(game_id)
         except KeyError:
@@ -92,6 +114,21 @@ class Command(BaseCommand):
         pitchers += awayPitchers
         pitchers += homePitchers
 
+        def get_rl2o(batter, box):
+            digit = re.compile(r"\d+")
+            for side_info in [box['away']['info'], box['home']['info']]:
+                for section in side_info:
+                    if section['title'] != 'BATTING':
+                        continue
+                    for entry in section['fieldList']:
+                        if entry['label'] == 'Runners left in scoring position, 2 out':
+                            for part in entry['value'].rstrip('.').split(';'):
+                                part = part.strip()
+                                if batter['name'] in part.replace('.', ''):
+                                    m = digit.search(part)
+                                    return int(m.group(0)) if m else 1
+            return 0
+    
         for batter in batters:
             batting_plays = [p for p in pbp['allPlays'] if p['matchup']['batter']['id'] == batter['personId']]
 
@@ -145,7 +182,7 @@ class Command(BaseCommand):
             
             singles = int(statline.h) - int(statline.hr) - int(statline.triples) - int(statline.doubles)
             statline.cycle = all(h > 0 for h in [int(s) for s in [statline.doubles,statline.triples,statline.hr,singles]])
-            statline.rl2o = sum([self.count_rl2o(play) for play in batting_plays])
+            statline.rl2o = get_rl2o(batter,box)
             statline.gidp = len([p for p in batting_plays if p['result']['eventType'] == 'grounded_into_double_play'])
             statline.po = len([play for play in running_plays if play['details']['eventType'] is not None and 'pickoff' in play['details']['eventType']])
             statline.cs = len([play for play in running_plays if play['details']['eventType'] is not None and 'caught_stealing' in play['details']['eventType'] and 'pickoff' not in play['details']['eventType']])
@@ -154,8 +191,8 @@ class Command(BaseCommand):
             statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in play['result']['description']])
             
             statline.lob = batter["lob"]
-            # print(statline,file=sys.stderr)
-            statline.save()
+            statline.game_type = game_type
+            statline.save(force_insert=statline._state.adding)
 
         def is_qs(pitcher, line):
             return not pitcher['is_reliever'] and Decimal(line['earnedRuns']) <= 3 and Decimal(line['inningsPitched']) >= 6
@@ -206,7 +243,6 @@ class Command(BaseCommand):
                 statline.statline_id=f'{game_id}-{pitcher["personId"]}'   
                 
             statline.date = date
-            statline.save()
 
             player = models.Player.objects.all().filter(mlbam_id=pitcher["personId"])
             if(len(player) > 0):
@@ -242,5 +278,5 @@ class Command(BaseCommand):
             setattr(statline, 'perfect_game',is_pg(pitching_line, pitching_plays))
             setattr(statline, 'no_hitter',is_nh(pitching_line, pitching_plays))
             setattr(statline,'relief_loss',is_relief_loss(pitcher))
-            print(statline)
-            statline.save()
+            setattr(statline,'game_type',game_type)
+            statline.save(force_insert=statline._state.adding)

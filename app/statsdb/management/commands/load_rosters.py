@@ -159,6 +159,8 @@ class Command(BaseCommand):
         self.parse_new_players()
         self.update_player_ids()
         self.parse_roster_info()
+        self.load_from_free_agents()
+        self.load_from_mlb_depthcharts()
 
     def update_player_ids(self):
         print("UPDATE PLAYER IDS")
@@ -246,14 +248,14 @@ class Command(BaseCommand):
                             p.mlbam_id = player[mlb_id]
 
                     # normalize position groups
-                    p.position = utils.normalize_pos(player.get("position", None))
-                    # p.level = "B"
-                            
-                    p.positions = player['position'].split('/')
+                    raw_pos = player.get("position") or ""
+                    p.position = utils.normalize_pos(raw_pos)
+                    p.positions = [x for x in raw_pos.split('/') if x]
 
                     if p.position:
-                        # won't save if position is null
                         p.save()
+                    else:
+                        print(f"  skipped (no position): {player.get('player')} pos={raw_pos!r}")
 
         with open("data/rosters/no_id_players.json", "w") as writefile:
             writefile.write(json.dumps(no_id_players))
@@ -389,6 +391,81 @@ class Command(BaseCommand):
 
                     except Exception as e:
                         print(f"error loading {player['player']}: {e}")
+
+    def load_from_free_agents(self):
+        print("LOAD FROM FREE AGENTS")
+        try:
+            with open("data/rosters/free_agents.json", "r") as f:
+                players = json.loads(f.read())
+        except FileNotFoundError:
+            print("  free_agents.json not found, skipping (run download_fg_free_agents first)")
+            return
+
+        created = 0
+        for player in players:
+            fg_id = player.get("playerId") or player.get("playerid1") or player.get("oPlayerId") or player.get("minormasterid")
+            if not fg_id:
+                continue
+
+            if models.Player.objects.filter(fg_id=fg_id).exists():
+                continue
+
+            raw_pos = player.get("position") or ""
+            position = utils.normalize_pos(raw_pos)
+            if not position:
+                print(f"  skipped (no position): {player.get('playerName')} pos={raw_pos!r}")
+                continue
+
+            p = models.Player()
+            p.name = player.get("playerName") or player.get("player") or ""
+            p.fg_id = fg_id
+            age = player.get("age")
+            if age is not None:
+                p.raw_age = int(age) if isinstance(age, int) else int(str(age).split(".")[0])
+            p.position = position
+            p.positions = [x for x in raw_pos.split("/") if x]
+            p.save()
+            created += 1
+
+        print(f"  created {created} players from free agents")
+
+    def load_from_mlb_depthcharts(self):
+        print("LOAD FROM MLB DEPTH CHARTS")
+        try:
+            with open("data/rosters/all_mlb_rosters.json", "r") as f:
+                players = json.loads(f.read())
+        except FileNotFoundError:
+            print("  all_mlb_rosters.json not found, skipping (run download_mlb_depthcharts first)")
+            return
+
+        updated = 0
+        for player in players:
+            mlbam_id = player.get("mlbam_id")
+            if not mlbam_id:
+                continue
+
+            try:
+                p = models.Player.objects.get(mlbam_id=mlbam_id)
+            except models.Player.DoesNotExist:
+                continue
+            except models.Player.MultipleObjectsReturned:
+                continue
+
+            changed = False
+            birthdate = player.get("birthdate")
+            if birthdate and not p.birthdate:
+                try:
+                    from dateutil.parser import parse as parse_date
+                    p.birthdate = parse_date(birthdate).date()
+                    changed = True
+                except Exception:
+                    pass
+
+            if changed:
+                p.save()
+                updated += 1
+
+        print(f"  updated {updated} players from MLB depth charts")
 
     def get_roster_info(self):
         print("GET ROSTER INFO")
