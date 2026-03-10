@@ -21,6 +21,7 @@ downloads/
 eggs/
 lib/
 lib64/
+!app/ballgame/src/lib/
 parts/
 sdist/
 var/
