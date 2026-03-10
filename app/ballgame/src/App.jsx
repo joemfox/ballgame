@@ -90,7 +90,8 @@ function App() {
 
   function login(event){
     event.preventDefault();
-    setIsLoggingIn(true)
+    setIsLoggingIn(true);
+    console.log('logging in',loginState)    
     fetch(`/login/`, {
       method: "POST",
       headers: {
