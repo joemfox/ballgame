@@ -91,7 +91,6 @@ function App() {
   function login(event){
     event.preventDefault();
     setIsLoggingIn(true);
-    console.log('logging in',loginState)    
     fetch(`/login/`, {
       method: "POST",
       headers: {
@@ -115,11 +114,11 @@ function App() {
   }
 
   const handlePasswordChange = (event) => {
-    setLoginState({password: event.target.value});
+    setLoginState(f => ({...f, password: event.target.value}));
   }
 
   const handleUserNameChange = (event) => {
-    setLoginState({username: event.target.value});
+    setLoginState(f => ({...f, username: event.target.value}));
   }
 
   function logout(){
