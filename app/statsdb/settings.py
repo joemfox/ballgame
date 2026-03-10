@@ -237,7 +237,7 @@ LEVELS = [
 ]
 
 CURRENT_SEASON = 2026
-CURRENT_SEASON_TYPE = "inseason"
+CURRENT_SEASON_TYPE = "offseason"
 
 DATEFORMAT = "%Y-%m-%d"
 
