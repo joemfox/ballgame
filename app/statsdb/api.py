@@ -780,7 +780,7 @@ class MyAPIController:
         lineup = get_object_or_404(Lineup.objects.all(),lineup_team=team_obj)
         return lineup
 
-    @api.get("/lineup/full", response=LineupSchema)
+    @api.get("/lineup/full")
     def lineup_full(request, team: str):
         SLOTS = [
             'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
