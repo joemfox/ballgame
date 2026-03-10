@@ -62,11 +62,11 @@ export const FAN_columns_hit = [
         id:'name',
         meta: { pinned: true, width: 150 },
         cell: ({row}) => {
-            const lvl = row.original.mlevel
+const lvl = row.original.mlevel
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {lvl && lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span>}
+                    {lvl ? lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
                 </span>
             )
         }
@@ -201,7 +201,7 @@ export const FAN_columns_pitch = [
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {lvl && lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span>}
+                    {lvl ? lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
                 </span>
             )
         }
@@ -321,7 +321,15 @@ const namePositionColumns = [
         header: 'name',
         id: 'name',
         meta: { pinned: true, width: 150 },
-        cell: ({ row }) => <Link to={`/player/${row.original.fg_id}`} className="text-left hover:underline">{row.getValue('name')}</Link>
+        cell: ({ row }) => {
+            const lvl = row.original.mlevel
+            return (
+                <span className="flex items-center gap-1">
+                    <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
+                    {lvl ? lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                </span>
+            )
+        }
     },
     {
         accessorKey: 'positions',

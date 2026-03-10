@@ -262,14 +262,14 @@ function App() {
               <ResizablePanel
                 defaultSize={defaultLayout[0]}
                 minSize={15}
-                maxSize={20}
+                maxSize={25}
                 className={`border-r-2  pt-4 ${cn(isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out")}`}
               >
                 <ScrollArea className="h-[calc(100vh-80px)]">
                   <LineupCard team={team} rosterVersion={rosterVersion} onRosterChange={onRosterChange}/>
                 </ScrollArea>
               </ResizablePanel>
-              <ResizableHandle withHandle />
+              <ResizableHandle />
               <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
                 <div className="m-auto  pt-4 w-auto px-4 h-[calc(100vh-80px)] overflow-y-auto">
                   {routes}

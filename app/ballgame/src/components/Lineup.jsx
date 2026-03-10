@@ -47,9 +47,10 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
             <div className="w-8 shrink-0 text-sm text-center font-bold border-r-2 mr-1 border-border text-muted-foreground">{position}</div>
             <div className="flex-1 min-w-0">
                 {playerInfo.fg_id ? (
-                    <Link to={`/player/${playerInfo.fg_id}`} className="font-light text-sm text-left truncate block hover:underline">
-                        {playerInfo.name}
-                    </Link>
+                    <span className="flex items-start gap-1">
+                        <Link to={`/player/${playerInfo.fg_id}`} className="font-light text-sm text-left truncate block hover:underline">{playerInfo.name}</Link>
+                        {playerInfo.mlevel ? playerInfo.mlevel !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{playerInfo.mlevel}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                    </span>
                 ) : (
                     <p className="font-light text-sm text-left truncate text-muted-foreground">—</p>
                 )}
@@ -172,7 +173,7 @@ export default function LineupCard({ team, rosterVersion, onRosterChange }) {
 
     useEffect(() => {
         if (!team) return
-        axios.get(`/api/team/${team}`).then(res => setTeamInfo(res.data)).catch(() => {})
+        axios.get(`/api/team/${team}`).then(res => setTeamInfo(res.data)).catch(() => { })
     }, [team])
 
     useEffect(() => { refreshLineup() }, [refreshLineup, rosterVersion])

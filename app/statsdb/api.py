@@ -808,7 +808,7 @@ class MyAPIController:
                 result[slot] = {
                     'name': p.name, 'first_name': p.first_name, 'last_name': p.last_name,
                     'positions': p.positions, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-                    'raw_age': p.raw_age,
+                    'raw_age': p.raw_age, 'mlevel': p.mlevel,
                     'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
                     'fan_total': hit_totals.get(p.pk) or pitch_totals.get(p.pk),
                 }
