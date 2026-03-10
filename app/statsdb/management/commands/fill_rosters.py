@@ -2,9 +2,9 @@
 Fill lineup slots with randomly assigned unowned players.
 
 Usage:
-    python manage.py fill_rosters              # fill all empty slots for all teams
+    python manage.py fill_rosters              # fill all empty slots (MLB players only)
     python manage.py fill_rosters --clear      # clear rosters first, then fill
-    python manage.py fill_rosters --mlb-only   # only use is_mlb=True players
+    python manage.py fill_rosters --all-players  # include non-MLB players
 """
 import random
 from django.core.management.base import BaseCommand
@@ -42,8 +42,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--clear', action='store_true',
                             help='Clear all existing roster assignments first')
-        parser.add_argument('--mlb-only', action='store_true',
-                            help='Only assign players with is_mlb=True')
+        parser.add_argument('--all-players', action='store_true',
+                            help='Include non-MLB players (default: MLB only)')
 
     def handle(self, *args, **options):
         if options['clear']:
@@ -75,7 +75,7 @@ class Command(BaseCommand):
                     continue  # slot already filled
 
                 qs = Player.objects.filter(team_assigned=None, positions__overlap=positions)
-                if options['mlb_only']:
+                if not options['all_players']:
                     qs = qs.filter(is_mlb=True)
                 candidates = list(qs)
                 if not candidates:
