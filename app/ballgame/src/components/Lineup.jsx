@@ -160,11 +160,17 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
 export default function LineupCard({ team, rosterVersion, onRosterChange }) {
     const [serverLineup, setServerLineup] = useState({})
     const [displayLineup, setDisplayLineup] = useState({})
+    const [teamInfo, setTeamInfo] = useState(null)
 
     const refreshLineup = useCallback(() => {
         if (!team) return
         axios.get('/api/lineup', { params: { team } })
             .then(res => setServerLineup(res.data))
+    }, [team])
+
+    useEffect(() => {
+        if (!team) return
+        axios.get(`/api/team/${team}`).then(res => setTeamInfo(res.data)).catch(() => {})
     }, [team])
 
     useEffect(() => { refreshLineup() }, [refreshLineup, rosterVersion])
@@ -198,6 +204,9 @@ export default function LineupCard({ team, rosterVersion, onRosterChange }) {
 
     return (
         <div className="p-1">
+            {teamInfo && (
+                <p className="text-sm font-semibold mb-2 px-1">{teamInfo.city} {teamInfo.nickname}</p>
+            )}
             {SLOT_ORDER.filter(slot => slot in displayLineup).map((playerSlot, i) => (
                 <React.Fragment key={playerSlot}>
                     {i > 0 && PITCHER_SLOTS.has(playerSlot) && !PITCHER_SLOTS.has(SLOT_ORDER[i - 1]) && (
