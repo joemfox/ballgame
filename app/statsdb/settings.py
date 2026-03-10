@@ -338,7 +338,7 @@ POINT_VALUES_HIT = {
     'r':-1,
     'lob':0.5,
     'po':4,
-    'rl2o':2,
+    'rl2o':1,
     'rbi':-1,
     'k_looking':0.5,
     'k_bp_1':2,
