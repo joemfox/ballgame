@@ -18,6 +18,7 @@ docker compose exec django python manage.py <command>
 | `download_mlb_depthcharts` | — | Scrapes MLB/MiLB rosters to `data/rosters/all_mlb_rosters.json` (slow) |
 | `load_rosters` | — | Imports players from all downloaded roster data (FG depth charts, FG free agents, MLB depth charts) |
 | `update_status_from_fg_rosters` | — | Updates player MLB status flags (`is_mlb`, `is_bullpen`, etc.) from downloaded FG rosters |
+| `link_statlines` | — | Links orphaned statlines (have `player_mlbam_id` but no player FK) to Player records, then re-aggregates season stats for affected years |
 
 ### In-season daily pipeline
 

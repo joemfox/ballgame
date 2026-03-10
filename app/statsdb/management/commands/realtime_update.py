@@ -72,6 +72,7 @@ class Command(BaseCommand):
         sched = [
             (now, d["game_id"], d.get("game_type", "R"))
             for d in statsapi.schedule(start_date=today, end_date=today)
+            if d.get("game_type", "R") == "R"
         ]
         return sched
     

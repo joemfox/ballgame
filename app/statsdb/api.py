@@ -910,6 +910,11 @@ class MyAPIController:
         t.save()
         return {"city": t.city, "abbreviation": t.abbreviation, "nickname": t.nickname}
 
+    @api.get("/team/{abbr}", response=TeamDetailSchema)
+    def get_team_by_abbr(request, abbr: str):
+        t = get_object_or_404(Team, abbreviation=abbr)
+        return {"city": t.city, "abbreviation": t.abbreviation, "nickname": t.nickname}
+
     @api.get("/draft", response=DraftStateSchema)
     def get_draft(request):
         season = utils.get_current_season()

@@ -321,6 +321,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
   const [openPositions, setOpenPositions] = useState([])
   const [season, setSeason] = useState(null)
   const [view, setView] = useState('season')
+  const [teamInfo, setTeamInfo] = useState(null)
 
   const activeClass = 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300'
   const inactiveClass = 'bg-muted text-foreground hover:bg-muted/80'
@@ -328,6 +329,11 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
   useEffect(() => {
     axios.get('/api/season').then(r => setSeason(r.data.season)).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!displayTeam) return
+    axios.get(`/api/team/${displayTeam}`).then(r => setTeamInfo(r.data)).catch(() => {})
+  }, [displayTeam])
 
   useEffect(() => {
     if (!displayTeam) return
@@ -348,6 +354,9 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
 
   return (
     <div className="space-y-8">
+      {teamInfo && (
+        <h1 className="text-2xl font-bold">{teamInfo.city} {teamInfo.nickname}</h1>
+      )}
       <div className="flex gap-8 justify-between">
         <div className="space-y-4 flex items-center">
           <TeamScore team={displayTeam} season={season} />
