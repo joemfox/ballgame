@@ -70,9 +70,8 @@ class Command(BaseCommand):
 
         today = now.strftime("%m/%d/%Y")
         sched = [
-            (now, d["game_id"], d.get("game_type", "R"))
+            (now, d["game_id"], d.get("game_type"))
             for d in statsapi.schedule(start_date=today, end_date=today)
-            if d.get("game_type", "R") == "R"
         ]
         return sched
     
