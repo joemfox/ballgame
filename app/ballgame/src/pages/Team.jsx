@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
 import StatlineTable from '@/components/StatlineTable.jsx'
@@ -276,6 +277,43 @@ function YesterdayTable({ team }) {
   )
 }
 
+function SombreroTable({ team, season }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    if (!season) return
+    axios.get(`/api/standings/sombrero/${season}`)
+      .then(r => setData(r.data))
+      .catch(() => setData([]))
+  }, [season])
+
+  if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>
+  if (!data.length) return <p className="text-sm text-muted-foreground">No sombreros yet for {season}.</p>
+
+  return (
+    <table className="w-full text-sm border rounded-md overflow-hidden">
+      <thead>
+        <tr className="border-b bg-muted">
+          <th className="text-left px-3 py-2 font-medium">#</th>
+          <th className="text-left px-3 py-2 font-medium">Team</th>
+          <th className="text-right px-3 py-2 font-medium">Sombreros</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row, i) => (
+          <tr key={row.team} className={`border-b last:border-0 hover:bg-muted/50 ${row.team === team ? 'bg-orange-50 dark:bg-orange-950/30' : ''}`}>
+            <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
+            <td className={`px-3 py-2 font-medium ${row.team === team ? 'text-orange-900 dark:text-orange-200' : ''}`}>
+              <Link to={`/team/${row.team}`} className="hover:underline">{row.team}</Link>
+            </td>
+            <td className={`px-3 py-2 text-right tabular-nums font-bold ${row.team === team ? 'text-orange-900 dark:text-orange-200' : ''}`}>{row.sombrero}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange }) {
   const displayTeam = viewTeam ?? team
   const readOnly = viewTeam != null && viewTeam !== team
@@ -310,7 +348,15 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
 
   return (
     <div className="space-y-8">
-      <TeamScore team={displayTeam} season={season} />
+      <div className="flex gap-8 justify-between">
+        <div className="space-y-4 flex items-center">
+          <TeamScore team={displayTeam} season={season} />
+        </div>
+        <div className="min-w-[200px]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Sombrero Cup</p>
+          <SombreroTable team={displayTeam} season={season} />
+        </div>
+      </div>
       <div className="flex rounded-md border overflow-hidden text-sm w-fit">
         {[['season', 'Season'], ['yesterday', 'Yesterday']].map(([val, label]) => (
           <button key={val} onClick={() => setView(val)}

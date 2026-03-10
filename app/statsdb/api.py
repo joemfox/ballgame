@@ -624,6 +624,17 @@ class MyAPIController:
     def current_season(request):
         return {"season": utils.get_current_season()}
 
+    @api.get("/standings/sombrero/{year}")
+    def sombrero_standings(request, year: str):
+        results = (
+            TeamBattingStatLine.objects
+            .filter(date__year=year)
+            .values('team__abbreviation')
+            .annotate(total=Sum('sombrero'))
+            .order_by('-total')
+        )
+        return [{'team': r['team__abbreviation'], 'sombrero': int(r['total'] or 0)} for r in results]
+
     @api.get("/standings/{year}", response=List[StandingsEntrySchema])
     def standings(request, year: str):
         bat = {

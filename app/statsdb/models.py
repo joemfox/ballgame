@@ -451,6 +451,7 @@ class BattingStatLine(BaseModel):
     gidp = models.IntegerField(blank=True,null=True)
     po = models.IntegerField(blank=True,null=True)
     outfield_assists = models.IntegerField(blank=True,null=True)
+    sombrero = models.BooleanField(default=False)  # h=0 and k>=4
 
     # fantasy score categories, should cover everything in settings.FAN_CATEGORIES_HIT
     # categories with Func in their expressions have special scoring relying on custom functions added via migrations
@@ -622,6 +623,7 @@ class SeasonBattingStatLine(BaseModel):
     gidp = models.IntegerField(blank=True,null=True)
     po = models.IntegerField(blank=True,null=True)
     outfield_assists = models.IntegerField(blank=True,null=True)
+    sombrero = models.IntegerField(blank=True,null=True)
     FAN_ab = models.FloatField(blank=True,null=True)
     FAN_r = models.FloatField(blank=True,null=True)
     FAN_h = models.FloatField(blank=True,null=True)
@@ -677,6 +679,7 @@ class TeamBattingStatLine(BaseModel):
     gidp = models.IntegerField(blank=True,null=True)
     po = models.IntegerField(blank=True,null=True)
     outfield_assists = models.IntegerField(blank=True,null=True)
+    sombrero = models.IntegerField(blank=True,null=True)
     FAN_ab = models.FloatField(blank=True,null=True)
     FAN_r = models.FloatField(blank=True,null=True)
     FAN_h = models.FloatField(blank=True,null=True)

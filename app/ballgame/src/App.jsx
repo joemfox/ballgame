@@ -189,7 +189,7 @@ function App() {
     <Router>
       <header>
         <div className="flex items-center justify-between py-3 px-4 h-14 w-full">
-          <h2 className="text-lg font-semibold"><a href="/">ballgame [alpha]</a></h2>
+          <h2 className="text-lg font-semibold font-mono tracking-tight"><a href="/">S0mbrero Quest</a></h2>
           <nav className="flex items-center gap-4 text-sm">
             <Link to="/">My Team</Link>
             <Link to="/players">Players</Link>

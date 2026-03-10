@@ -191,6 +191,7 @@ class Command(BaseCommand):
             statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in play['result']['description']])
             
             statline.lob = batter["lob"]
+            statline.sombrero = int(statline.h) == 0 and int(statline.k) >= 4
             statline.game_type = game_type
             statline.save(force_insert=statline._state.adding)
 
