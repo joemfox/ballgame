@@ -76,7 +76,7 @@ class Command(BaseCommand):
 
                 qs = Player.objects.filter(team_assigned=None, positions__overlap=positions)
                 if not options['all_players']:
-                    qs = qs.filter(Role="MLB")
+                    qs = qs.filter(role="MLB")
                 candidates = list(qs)
                 if not candidates:
                     continue
