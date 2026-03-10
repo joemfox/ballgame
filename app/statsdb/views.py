@@ -32,6 +32,24 @@ def session_view(request):
         return JsonResponse({"isAuthenticated": False})
     return JsonResponse({"isAuthenticated": True})
 
+@require_POST
+def change_password_view(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+    data = json.loads(request.body)
+    current = data.get("current_password")
+    new = data.get("new_password")
+    if not current or not new:
+        return JsonResponse({"detail": "Both current and new password are required."}, status=400)
+    if not request.user.check_password(current):
+        return JsonResponse({"detail": "Current password is incorrect."}, status=400)
+    if len(new) < 8:
+        return JsonResponse({"detail": "New password must be at least 8 characters."}, status=400)
+    request.user.set_password(new)
+    request.user.save()
+    login(request, request.user)
+    return JsonResponse({"detail": "Password changed."})
+
 def whoami_view(request):
     if not request.user.is_authenticated:
         return JsonResponse({"isAuthenticated": False})

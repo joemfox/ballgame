@@ -28,5 +28,6 @@ urlpatterns = [
     path('api/logout/', views.logout_view, name='api-logout'),
     path('api/session/', views.session_view, name='api-session'),
     path('api/whoami/', views.whoami_view, name='api-whoami'),
+    path('api/change-password/', views.change_password_view, name='api-change-password'),
     path('api/', api.urls),
 ]

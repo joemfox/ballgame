@@ -152,7 +152,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center relative">
         <div className="absolute top-4 right-4"><ThemeToggle /></div>
         <div className="w-full max-w-sm p-8 border rounded-lg shadow-sm bg-card text-card-foreground">
-          <h1 className="text-2xl font-semibold mb-1">s0mbrero.quest</h1>
+          <h1 className="text-2xl font-semibold geist-mono mb-1">sombrero.quest</h1>
           <p className="text-sm text-muted-foreground mb-6">Sign in to your account</p>
           <form onSubmit={login} className="space-y-4">
             <div>
@@ -189,7 +189,7 @@ function App() {
     <Router>
       <header>
         <div className="flex items-center justify-between py-3 px-4 h-14 w-full">
-          <h2 className="text-lg font-semibold font-mono tracking-tight"><a href="/">s0mbrero Quest</a></h2>
+          <h2 className="text-lg font-semibold geist-mono tracking-tight"><a href="/">sombrero.quest</a></h2>
           <nav className="flex items-center gap-4 text-sm">
             <Link to="/">My Team</Link>
             <Link to="/players">Players</Link>
