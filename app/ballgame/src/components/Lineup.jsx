@@ -93,10 +93,12 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
 
     useEffect(() => {
         const p = props.player
-        if (p) {
-            fetchNewPlayerInfo(p.fg_id ?? p)
-        } else {
+        if (!p) {
             setPlayerInfo({ name: '', stats: '', positions: [], fg_id: null })
+        } else if (p.name) {
+            setPlayerInfo(p)
+        } else {
+            fetchNewPlayerInfo(p.fg_id ?? p)
         }
     }, [props.player])
 
@@ -164,7 +166,7 @@ export default function LineupCard({ team, rosterVersion, onRosterChange }) {
 
     const refreshLineup = useCallback(() => {
         if (!team) return
-        axios.get('/api/lineup', { params: { team } })
+        axios.get('/api/lineup/full', { params: { team } })
             .then(res => setServerLineup(res.data))
     }, [team])
 

@@ -357,7 +357,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
       {teamInfo && (
         <h1 className="text-2xl font-bold">{teamInfo.city} {teamInfo.nickname}</h1>
       )}
-      <div className="flex gap-8 justify-between">
+      <div className="flex flex-col sm:flex-row gap-8 sm:justify-between">
         <div className="space-y-4 flex items-center">
           <TeamScore team={displayTeam} season={season} />
         </div>

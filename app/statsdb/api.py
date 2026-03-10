@@ -780,6 +780,40 @@ class MyAPIController:
         lineup = get_object_or_404(Lineup.objects.all(),lineup_team=team_obj)
         return lineup
 
+    @api.get("/lineup/full", response=LineupSchema)
+    def lineup_full(request, team: str):
+        SLOTS = [
+            'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
+            'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
+            'lineup_DH', 'lineup_UTIL',
+            'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
+            'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
+        ]
+        team_obj = get_object_or_404(Team, abbreviation=team)
+        lineup = get_object_or_404(
+            Lineup.objects.select_related(*[f'{s}__team_assigned' for s in SLOTS]),
+            lineup_team=team_obj,
+        )
+        season = utils.get_current_season()
+        players = {s: getattr(lineup, s) for s in SLOTS if getattr(lineup, s) is not None}
+        player_pks = list({p.pk for p in players.values()})
+        hit_totals = {s.player_id: float(s.FAN_total) for s in SeasonBattingStatLine.objects.filter(player_id__in=player_pks, year=season) if s.FAN_total is not None}
+        pitch_totals = {s.player_id: float(s.FAN_total) for s in SeasonPitchingStatLine.objects.filter(player_id__in=player_pks, year=season) if s.FAN_total is not None}
+        result = {}
+        for slot in SLOTS:
+            p = players.get(slot)
+            if p is None:
+                result[slot] = None
+            else:
+                result[slot] = {
+                    'name': p.name, 'first_name': p.first_name, 'last_name': p.last_name,
+                    'positions': p.positions, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
+                    'raw_age': p.raw_age,
+                    'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
+                    'fan_total': hit_totals.get(p.pk) or pitch_totals.get(p.pk),
+                }
+        return result
+
     @api.get("/lineup/yesterday")
     def lineup_yesterday(request, team: str):
         yesterday = _dt.date.today() - _dt.timedelta(days=1)

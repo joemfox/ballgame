@@ -137,6 +137,7 @@ function App() {
   const defaultLayout = [20, 80]
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [rosterOpen, setRosterOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Detect mobile (< 768px), reactive to resize
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
@@ -190,7 +191,8 @@ function App() {
       <header>
         <div className="flex items-center justify-between py-3 px-4 h-14 w-full">
           <h2 className="text-lg font-semibold geist-mono tracking-tight"><a href="/">sombrero.quest</a></h2>
-          <nav className="flex items-center gap-4 text-sm">
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex items-center gap-4 text-sm">
             <Link to="/">My Team</Link>
             <Link to="/players">Players</Link>
             <Link to="/standings">Standings</Link>
@@ -198,7 +200,29 @@ function App() {
             <Link to="/settings">Settings</Link>
             <ThemeToggle />
           </nav>
+          {/* Mobile nav toggle */}
+          <div className="flex sm:hidden items-center gap-2">
+            <ThemeToggle />
+            <button onClick={() => setMenuOpen(o => !o)} className="p-2 rounded-md hover:bg-muted" aria-label="Menu">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                {menuOpen
+                  ? <path fillRule="evenodd" clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" />
+                  : <path fillRule="evenodd" clipRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                }
+              </svg>
+            </button>
+          </div>
         </div>
+        {/* Mobile dropdown menu */}
+        {menuOpen && (
+          <nav className="sm:hidden border-t px-4 py-2 flex flex-col gap-1 text-sm bg-background">
+            <Link to="/" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">My Team</Link>
+            <Link to="/players" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Players</Link>
+            <Link to="/standings" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Standings</Link>
+            <Link to="/draft" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Draft</Link>
+            <Link to="/settings" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Settings</Link>
+          </nav>
+        )}
         <Separator/>
       </header>
       <DndProvider backend={HTML5Backend}>
