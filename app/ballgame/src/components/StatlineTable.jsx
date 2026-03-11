@@ -308,7 +308,7 @@ export default function DataTable({
                                     const highlightClass = meta?.highlight ? 'bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300' : ''
                                     const headerStyle = pinned ? stickyStyle : (meta?.highlight ? {} : { backgroundColor: 'hsl(var(--background))' })
                                     return (
-                                        <TableHead key={header.id} className={`${meta?.className ?? ''} ${highlightClass}`} style={headerStyle}>
+                                        <TableHead key={header.id} className={`${meta?.className ?? ''} ${highlightClass} pinned-cols`} style={headerStyle}>
                                             {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                                         </TableHead>
                                     )
@@ -358,7 +358,7 @@ export default function DataTable({
                                     } : shadeStyle
 
                                     return (
-                                        <TableCell key={cell.id} className={`py-0 ${meta?.className ?? ''} ${highlightClass}`} style={stickyStyle}>
+                                        <TableCell key={cell.id} className={`py-0 ${meta?.className ?? ''} ${highlightClass} pinned-cols`} style={stickyStyle}>
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     )

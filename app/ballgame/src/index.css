@@ -163,3 +163,11 @@ body {
   margin: 0 auto;
   text-align: center;
 }
+@media (max-width: 768px) {
+  
+  .pinned-cols{
+    position:relative!important;
+    left:0!important;
+  }
+  
+}

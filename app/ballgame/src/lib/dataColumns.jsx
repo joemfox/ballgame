@@ -415,7 +415,7 @@ const ALWAYS_SHOW = new Set(['name', 'positions', 'FAN_total', 'actions', 'team_
 const hideStats = cols => cols.map(col =>
     ALWAYS_SHOW.has(col.accessorKey) || ALWAYS_SHOW.has(col.id)
         ? col
-        : { ...col, meta: { ...(col.meta ?? {}), className: 'hidden xl:table-cell' } }
+        : { ...col, meta: { ...(col.meta ?? {}), className: 'xl:table-cell' } }
 )
 
 export default {

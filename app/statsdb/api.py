@@ -401,7 +401,13 @@ class MyAPIController:
         if filters.search:
             queryset = queryset.filter(name__icontains=filters.search)
         if filters.positions:
-            pos_q = Q(*[Q(positions__icontains=p) for p in filters.positions], _connector=Q.OR)
+            pos_q = Q(
+                *[
+                    Q(positions__contains=[p])
+                    for p in filters.positions
+                ],
+                _connector=Q.OR,
+            )
             queryset = queryset.filter(pos_q)
         if filters.available is True:
             queryset = queryset.filter(team_assigned__isnull=True)
