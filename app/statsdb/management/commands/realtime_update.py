@@ -85,7 +85,7 @@ class Command(BaseCommand):
 
 
     @transaction.atomic
-    def load_game(self, date, game_id, overwrite, game_type='R'):
+    def load_game(self, date, game_id, overwrite, game_type):
         try:
             box = statsapi.boxscore_data(game_id)
         except KeyError:
