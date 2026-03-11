@@ -62,7 +62,7 @@ export const FAN_columns_hit = [
         id:'name',
         meta: { pinned: true, width: 150 },
         cell: ({row}) => {
-const lvl = row.original.mlevel
+            const lvl = row.original.mlevel
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>

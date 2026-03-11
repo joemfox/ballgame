@@ -871,6 +871,7 @@ class MyAPIController:
                 'slot': slot.replace('lineup_', ''),
                 'positions': list(player.positions) if player.positions else [],
                 'team_assigned': team_obj.abbreviation,
+                'mlevel':player.mlevel
             }
             stat = BattingStatLine.objects.filter(player=player, date=yesterday).filter(rs_filter).first()
             if stat:
@@ -888,6 +889,7 @@ class MyAPIController:
                 'slot': slot.replace('lineup_', ''),
                 'positions': list(player.positions) if player.positions else [],
                 'team_assigned': team_obj.abbreviation,
+                'mlevel':player.mlevel
             }
             stat = PitchingStatLine.objects.filter(player=player, date=yesterday).filter(rs_filter).first()
             if stat:
