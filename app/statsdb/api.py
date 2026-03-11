@@ -960,6 +960,8 @@ class MyAPIController:
     @api.get("/draft", response=DraftStateSchema)
     def get_draft(request):
         season = utils.get_current_season()
+        is_offseason = utils.get_current_season_type() == "offseason"
+        season = (season + 1) if is_offseason else season
         draft = Draft.objects.filter(year=season).first()
         if draft is None:
             return api.create_response(request, {"detail": "No draft found for current season"}, status=404)

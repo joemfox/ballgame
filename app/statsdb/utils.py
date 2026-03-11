@@ -53,6 +53,9 @@ def get_current_season():
         season = season - 1
     return season
 
+def get_current_season_type():
+    return settings.CURRENT_SEASON_TYPE
+
 
 def get_strat_season():
     today = datetime.today()
