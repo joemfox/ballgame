@@ -375,7 +375,7 @@ function SombreroTable({ team, season }) {
           <tr key={row.team} className={`border-b last:border-0 hover:bg-muted/50 ${row.team === team ? 'bg-orange-50 dark:bg-orange-950/30' : ''}`}>
             <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
             <td className={`px-3 py-2 font-medium ${row.team === team ? 'text-orange-900 dark:text-orange-200' : ''}`}>
-              <Link to={`/team/${row.team}`} className="hover:underline">{row.team}</Link>
+              <Link to={`/team/${row.team}`} className="hover:underline">{row.team_name || row.team}</Link>
             </td>
             <td className={`px-3 py-2 text-right tabular-nums font-bold ${row.team === team ? 'text-orange-900 dark:text-orange-200' : ''}`}>{row.sombrero}</td>
           </tr>

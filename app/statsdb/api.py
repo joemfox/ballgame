@@ -313,6 +313,7 @@ class LineupAssignSchema(Schema):
 
 class StandingsEntrySchema(Schema):
     team: str
+    team_name: str | None = None
     bat_total: float
     pitch_total: float
     total: float
@@ -743,14 +744,15 @@ class MyAPIController:
         results = (
             TeamBattingStatLine.objects
             .filter(date__year=year)
-            .values('team__abbreviation')
+            .values('team__abbreviation', 'team__city', 'team__nickname')
             .annotate(total=Sum('sombrero'))
             .order_by('-total')
         )
-        return [{'team': r['team__abbreviation'], 'sombrero': int(r['total'] or 0)} for r in results]
+        return [{'team': r['team__abbreviation'], 'team_name': f"{r['team__city']} {r['team__nickname']}".strip(), 'sombrero': int(r['total'] or 0)} for r in results]
 
     @api.get("/standings/{year}", response=List[StandingsEntrySchema])
     def standings(request, year: str):
+        team_names = {t.abbreviation: f"{t.city} {t.nickname}".strip() for t in Team.objects.all()}
         bat = {
             r['team__abbreviation']: float(r['total'] or 0)
             for r in TeamBattingStatLine.objects.filter(date__year=year)
@@ -767,7 +769,7 @@ class MyAPIController:
         for abbr in set(bat) | set(pitch):
             b = bat.get(abbr, 0.0)
             p = pitch.get(abbr, 0.0)
-            result.append({'team': abbr, 'bat_total': b, 'pitch_total': p, 'total': b + p})
+            result.append({'team': abbr, 'team_name': team_names.get(abbr), 'bat_total': b, 'pitch_total': p, 'total': b + p})
         result.sort(key=lambda x: x['total'], reverse=True)
         return result
 

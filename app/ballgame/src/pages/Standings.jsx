@@ -48,7 +48,7 @@ export default function Standings() {
                             {standings.map((row, i) => (
                                 <tr key={row.team} className="border-b last:border-0 hover:bg-muted/50">
                                     <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                                    <td className="px-3 py-2 font-medium"><Link to={`/team/${row.team}`} className="hover:underline">{row.team}</Link></td>
+                                    <td className="px-3 py-2 font-medium"><Link to={`/team/${row.team}`} className="hover:underline">{row.team_name || row.team}</Link></td>
                                     <td className="px-3 py-2 text-right tabular-nums">{row.bat_total.toFixed(1)}</td>
                                     <td className="px-3 py-2 text-right tabular-nums">{row.pitch_total.toFixed(1)}</td>
                                     <td className="px-3 py-2 text-right tabular-nums font-bold bg-orange-50 dark:bg-orange-950/40 text-orange-900 dark:text-orange-200">{row.total.toFixed(1)}</td>
@@ -76,7 +76,7 @@ export default function Standings() {
                             {sombrero.map((row, i) => (
                                 <tr key={row.team} className="border-b last:border-0 hover:bg-muted/50">
                                     <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                                    <td className="px-3 py-2 font-medium"><Link to={`/team/${row.team}`} className="hover:underline">{row.team}</Link></td>
+                                    <td className="px-3 py-2 font-medium"><Link to={`/team/${row.team}`} className="hover:underline">{row.team_name || row.team}</Link></td>
                                     <td className="px-3 py-2 text-right tabular-nums font-bold">{row.sombrero}</td>
                                 </tr>
                             ))}
