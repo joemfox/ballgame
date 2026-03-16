@@ -48,7 +48,11 @@ export default function Transactions() {
                                         {t.transaction_type === 'add' ? 'Add' : 'Drop'}
                                     </span>
                                 </td>
-                                <td className="px-3 py-2">{t.player_name}</td>
+                                <td className="px-3 py-2">
+                                    {t.player_fg_id
+                                        ? <Link to={`/player/${t.player_fg_id}`} className="hover:underline">{t.player_name}</Link>
+                                        : t.player_name}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

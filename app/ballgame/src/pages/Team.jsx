@@ -65,6 +65,8 @@ function BestPerformances({ team, season }) {
                     <td key={key} className={`px-3 py-1.5 tabular-nums ${isDate || isPlayer || isType ? 'text-left' : 'text-right'} ${isFan ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''}`}>
                       {isType && val ? (
                         <span className={`text-xs px-1 py-0.5 rounded font-semibold ${val === 'H' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>{val}</span>
+                      ) : isPlayer && row.fg_id ? (
+                        <Link to={`/player/${row.fg_id}`} className="hover:underline">{val}</Link>
                       ) : display}
                     </td>
                   )
@@ -143,21 +145,22 @@ const SLOT_COL = {
   cell: ({ row }) => <div className="text-left">{row.getValue('slot')}</div>,
 }
 
-const NON_SUMMABLE = new Set(['slot', 'name', 'positions', 'team_assigned'])
+const NON_SUMMABLE = new Set(['slot', 'name', 'positions', 'team_assigned', 'game_type'])
 
 function StatTable({ rows, columns }) {
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() })
 
-  // Compute column sums for the total row
+  // Compute column sums for the total row — only count R (scoring) games
+  const scoringRows = rows.filter(r => !r.game_type || r.game_type === 'R')
   const totals = {}
   for (const col of columns) {
     const key = col.accessorKey
     if (!key || NON_SUMMABLE.has(col.id ?? key)) continue
-    const sum = rows.reduce((acc, row) => {
+    const sum = scoringRows.reduce((acc, row) => {
       const v = row[key]
       return typeof v === 'number' ? acc + v : acc
     }, 0)
-    const hasAny = rows.some(row => row[key] != null)
+    const hasAny = scoringRows.some(row => row[key] != null)
     totals[key] = hasAny ? sum : null
   }
 
@@ -180,8 +183,13 @@ function StatTable({ rows, columns }) {
           </tr>
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row, i) => (
-            <tr key={i} className="border-b hover:bg-muted/40">
+          {table.getRowModel().rows.map((row, i) => {
+            const gt = row.original.game_type
+            const rowBg = gt && gt !== 'R'
+              ? SPRING_TYPES.has(gt) ? 'bg-green-50/60 dark:bg-green-950/20' : 'bg-yellow-50/60 dark:bg-yellow-950/20'
+              : ''
+            return (
+            <tr key={i} className={`border-b hover:bg-muted/40 ${rowBg}`}>
               {row.getVisibleCells().map(cell => {
                 const meta = cell.column.columnDef.meta
                 const widthStyle = meta?.width ? { minWidth: meta.width, maxWidth: meta.width } : {}
@@ -193,7 +201,7 @@ function StatTable({ rows, columns }) {
                 </td>
               )})}
             </tr>
-          ))}
+          )})}
         </tbody>
         <tfoot>
           <tr className="border-t-2 bg-muted/30 font-semibold">
@@ -223,88 +231,36 @@ function StatTable({ rows, columns }) {
   )
 }
 
-const GAME_TYPE_LABELS = {
-  S: 'Spring Training', E: 'Exhibition', A: 'All-Star',
-  D: 'Division Series', L: 'LCS', W: 'World Series', F: 'Wild Card', P: 'Postseason',
-}
 const SPRING_TYPES = new Set(['S', 'E'])
 const POST_TYPES = new Set(['D', 'L', 'W', 'F', 'P', 'A'])
+const GAME_TYPE_SHORT = { S: 'ST', E: 'EX', A: 'AS', D: 'DS', L: 'LCS', W: 'WS', F: 'WC', P: 'PS' }
 
-function gameTypeBorderClass(gameType) {
-  if (SPRING_TYPES.has(gameType)) return 'border-green-500 dark:border-green-400'
-  if (POST_TYPES.has(gameType)) return 'border-yellow-500 dark:border-yellow-400'
-  return 'border-border'
-}
-function gameTypeTabClass(gameType) {
-  if (SPRING_TYPES.has(gameType)) return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-500 dark:border-green-400'
-  if (POST_TYPES.has(gameType)) return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-500 dark:border-yellow-400'
-  return 'bg-muted text-muted-foreground border-border'
-}
-
-function ExtraGameBlock({ game, columns }) {
-  const label = GAME_TYPE_LABELS[game.game_type] ?? game.game_type
-  const borderCls = gameTypeBorderClass(game.game_type)
-  const tabCls = gameTypeTabClass(game.game_type)
-  return (
-    <div className={`mt-1 rounded-md border-2 ${borderCls} overflow-hidden`}>
-      <div className={`px-2 py-0.5 text-xs font-semibold border-b-2 ${tabCls}`}>{label}</div>
-      <div className="overflow-x-auto">
-        <table className="text-sm geist-mono w-full">
-          <tbody>
-            <tr>
-              {columns.map(col => {
-                const key = col.accessorKey
-                const id = col.id ?? key
-                if (!key || id === 'slot') return null
-                const meta = col.meta
-                const v = game[key]
-                const display = v == null ? '-' : (meta?.highlight || key === 'ip') ? Number(v).toFixed(1) : v
-                return (
-                  <td key={id} className={`px-3 py-1 tabular-nums text-right ${id === 'name' ? 'text-left' : ''} ${meta?.highlight ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''}`}>
-                    {display}
-                  </td>
-                )
-              })}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
+const GAME_TYPE_COL = {
+  id: 'game_type',
+  accessorKey: 'game_type',
+  header: '',
+  meta: { width: 36 },
+  cell: ({ row }) => {
+    const gt = row.getValue('game_type')
+    if (!gt || gt === 'R') return null
+    const label = GAME_TYPE_SHORT[gt] ?? gt
+    const cls = SPRING_TYPES.has(gt)
+      ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
+      : 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200'
+    return <span className={`text-xs px-1 py-0.5 rounded font-semibold ${cls}`}>{label}</span>
+  },
 }
 
 function DayLineupTable({ data, scoreType }) {
   if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>
 
-  const hitCols = [SLOT_COL, ...columnData[`${scoreType}_columns_hit`]]
-  const pitchCols = [SLOT_COL, ...columnData[`${scoreType}_columns_pitch`]]
+  const hitCols = [SLOT_COL, GAME_TYPE_COL, ...columnData[`${scoreType}_columns_hit`]]
+  const pitchCols = [SLOT_COL, GAME_TYPE_COL, ...columnData[`${scoreType}_columns_pitch`]]
 
   const dayTotal = [
-    ...data.hitters.map(r => r.FAN_total ?? 0),
-    ...data.pitchers.map(r => r.FAN_total ?? 0),
+    ...data.hitters.filter(r => !r.game_type || r.game_type === 'R').map(r => r.FAN_total ?? 0),
+    ...data.pitchers.filter(r => !r.game_type || r.game_type === 'R').map(r => r.FAN_total ?? 0),
   ].reduce((a, b) => a + b, 0)
-
-  function renderWithExtras(rows, cols) {
-    if (!rows.length) return <p className="text-sm text-muted-foreground">No players in lineup.</p>
-    const nonSlotCols = cols.filter(c => (c.id ?? c.accessorKey) !== 'slot')
-    return (
-      <div className="space-y-1">
-        <StatTable rows={rows} columns={cols} />
-        {rows.some(r => r.extra_games?.length > 0) && (
-          <div className="space-y-3 mt-2">
-            {rows.filter(r => r.extra_games?.length > 0).map(r => (
-              <div key={r.fg_id} className="space-y-0">
-                <p className="text-xs text-muted-foreground font-medium mb-0.5">{r.player_name} — {r.slot}</p>
-                {r.extra_games.map((g, i) => (
-                  <ExtraGameBlock key={i} game={g} columns={nonSlotCols} />
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-2">
@@ -316,11 +272,11 @@ function DayLineupTable({ data, scoreType }) {
       </div>
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Hitters</p>
-        {renderWithExtras(data.hitters, hitCols)}
+        {data.hitters.length ? <StatTable rows={data.hitters} columns={hitCols} /> : <p className="text-sm text-muted-foreground">No hitters in lineup.</p>}
       </div>
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Pitchers</p>
-        {renderWithExtras(data.pitchers, pitchCols)}
+        {data.pitchers.length ? <StatTable rows={data.pitchers} columns={pitchCols} /> : <p className="text-sm text-muted-foreground">No pitchers in lineup.</p>}
       </div>
     </div>
   )

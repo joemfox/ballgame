@@ -147,6 +147,7 @@ import datetime as _dt
 class StatlinePerformanceSchema(Schema):
     date: str
     player_name: str | None = None
+    fg_id: str | None = None
     type: str  # 'H' or 'P'
     FAN_total: float | None = None
     h: int | None = None
@@ -277,6 +278,7 @@ class PaginatedSeasonPitchingStatLineSchema(Schema):
 class TransactionSchema(Schema):
     id: int
     player_name: str
+    player_fg_id: str | None = None
     team: str
     transaction_type: str
     timestamp: str
@@ -375,23 +377,23 @@ def _lineup_for_date(team_obj, date):
             player = getattr(lineup, slot)
             if not player:
                 continue
-            row = {
+            base = {
                 'player_name': player.name,
                 'fg_id': player.fg_id,
                 'slot': slot.replace('lineup_', ''),
                 'positions': list(player.positions) if player.positions else [],
                 'team_assigned': team_obj.abbreviation,
                 'mlevel': player.mlevel,
-                'extra_games': [],
             }
             all_stats = list(model.objects.filter(player=player, date=date))
-            r_stat = next((s for s in all_stats if s.game_type == 'R' or s.game_type is None), None)
-            extra = [s for s in all_stats if s.game_type not in ('R', None)]
-            if r_stat:
-                row.update(serialize(r_stat, fields))
-            for s in extra:
-                row['extra_games'].append({'game_type': s.game_type, **serialize(s, fields)})
-            rows.append(row)
+            if all_stats:
+                for stat in all_stats:
+                    row = dict(base)
+                    row['game_type'] = stat.game_type
+                    row.update(serialize(stat, fields))
+                    rows.append(row)
+            else:
+                rows.append({**base, 'game_type': None})
         return rows
 
     hitters = build_rows([
@@ -705,20 +707,22 @@ class MyAPIController:
 
         bat = list(BattingStatLine.objects.filter(
             fantasy_team=team_obj, date__year=year
-        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'h', 'hr', 'r', 'rbi', 'sb', 'k'))
+        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'player__fg_id', 'h', 'hr', 'r', 'rbi', 'sb', 'k'))
         for row in bat:
             row['type'] = 'H'
             row['player_name'] = row.pop('player__name')
+            row['fg_id'] = row.pop('player__fg_id')
             row['date'] = str(row['date'])
             row['ip'] = None
             row['er'] = None
 
         pitch = list(PitchingStatLine.objects.filter(
             fantasy_team=team_obj, date__year=year
-        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'ip', 'k', 'er', 'hr', 'h'))
+        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'player__fg_id', 'ip', 'k', 'er', 'hr', 'h'))
         for row in pitch:
             row['type'] = 'P'
             row['player_name'] = row.pop('player__name')
+            row['fg_id'] = row.pop('player__fg_id')
             row['date'] = str(row['date'])
             row['r'] = None
             row['rbi'] = None
@@ -934,6 +938,7 @@ class MyAPIController:
             TransactionSchema(
                 id=t.id,
                 player_name=t.player.name,
+                player_fg_id=t.player.fg_id,
                 team=t.team.abbreviation,
                 transaction_type=t.transaction_type,
                 timestamp=t.timestamp.isoformat(),
