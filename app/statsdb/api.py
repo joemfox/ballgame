@@ -12,7 +12,7 @@ from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, Draft, DraftPick
+from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, Draft, DraftPick, Transaction
 from ninja import NinjaAPI, Schema, ModelSchema, FilterSchema, Query
 from ninja_extra import (api_controller, NinjaExtraAPI)
 from ninja.errors import ValidationError as NinjaValidationError
@@ -274,6 +274,13 @@ class PaginatedSeasonPitchingStatLineSchema(Schema):
     stddev_total: float | None = None
     sum_total: float | None = None
 
+class TransactionSchema(Schema):
+    id: int
+    player_name: str
+    team: str
+    transaction_type: str
+    timestamp: str
+
 OF_SLOTS = ['lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5']
 HITTER_SLOTS = ['lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B'] + OF_SLOTS + ['lineup_DH', 'lineup_UTIL']
 
@@ -334,6 +341,71 @@ class DraftPickIn(Schema):
 class DraftStartIn(Schema):
     order: List[str] | None = None
     rounds: int = 16
+
+
+def _lineup_for_date(team_obj, date):
+    lineup = get_object_or_404(Lineup, lineup_team=team_obj)
+
+    BAT_FIELDS = [
+        'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
+        'lob', 'sb', 'cs', 'e', 'k_looking', 'rl2o', 'cycle', 'gidp', 'po', 'outfield_assists',
+        'FAN_total', 'FAN_r', 'FAN_h', 'FAN_doubles', 'FAN_triples', 'FAN_hr',
+        'FAN_rbi', 'FAN_sb', 'FAN_cs', 'FAN_bb', 'FAN_k', 'FAN_k_looking',
+        'FAN_lob', 'FAN_gidp', 'FAN_e', 'FAN_outs', 'FAN_po', 'FAN_rl2o',
+        'FAN_outfield_assists', 'FAN_cycle',
+    ]
+    PIT_FIELDS = [
+        'ip', 'h', 'er', 'bb', 'k', 'hr', 'bs', 'hb', 'wp', 'balks', 'ir', 'irs',
+        'e', 'dpi', 'bra', 'perfect_game', 'no_hitter', 'relief_loss',
+        'FAN_total', 'FAN_ip', 'FAN_h', 'FAN_er', 'FAN_bb', 'FAN_k', 'FAN_hr',
+        'FAN_bs', 'FAN_hb', 'FAN_wp', 'FAN_balks', 'FAN_ir', 'FAN_irs', 'FAN_e',
+        'FAN_dpi', 'FAN_bra', 'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss',
+    ]
+
+    def serialize(stat, fields):
+        result = {}
+        for f in fields:
+            v = getattr(stat, f, None)
+            result[f] = float(v) if hasattr(v, '__float__') and v is not None else v
+        return result
+
+    def build_rows(slots, model, fields):
+        rows = []
+        for slot in slots:
+            player = getattr(lineup, slot)
+            if not player:
+                continue
+            row = {
+                'player_name': player.name,
+                'fg_id': player.fg_id,
+                'slot': slot.replace('lineup_', ''),
+                'positions': list(player.positions) if player.positions else [],
+                'team_assigned': team_obj.abbreviation,
+                'mlevel': player.mlevel,
+                'extra_games': [],
+            }
+            all_stats = list(model.objects.filter(player=player, date=date))
+            r_stat = next((s for s in all_stats if s.game_type == 'R' or s.game_type is None), None)
+            extra = [s for s in all_stats if s.game_type not in ('R', None)]
+            if r_stat:
+                row.update(serialize(r_stat, fields))
+            for s in extra:
+                row['extra_games'].append({'game_type': s.game_type, **serialize(s, fields)})
+            rows.append(row)
+        return rows
+
+    hitters = build_rows([
+        'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
+        'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
+        'lineup_DH', 'lineup_UTIL',
+    ], BattingStatLine, BAT_FIELDS)
+
+    pitchers = build_rows([
+        'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
+        'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
+    ], PitchingStatLine, PIT_FIELDS)
+
+    return {'hitters': hitters, 'pitchers': pitchers, 'date': str(date)}
 
 
 @api_controller('')
@@ -593,6 +665,38 @@ class MyAPIController:
             qs = qs.filter(date__year=year)
         return qs.order_by('date')
 
+    @api.get("statlines/today")
+    def statlines_today(request, playerid: str):
+        today_utc = _dt.datetime.now(_dt.timezone.utc).date()
+        player = get_object_or_404(Player.objects.all(), fg_id=playerid)
+
+        def serialize_stat(stat, fields):
+            row = {'date': str(stat.date), 'game_type': stat.game_type}
+            for f in fields:
+                v = getattr(stat, f, None)
+                row[f] = float(v) if hasattr(v, '__float__') and v is not None else v
+            return row
+
+        BAT_FIELDS = [
+            'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
+            'lob', 'sb', 'cs', 'e', 'k_looking', 'rl2o', 'cycle', 'gidp', 'po', 'outfield_assists',
+            'FAN_total', 'FAN_r', 'FAN_h', 'FAN_doubles', 'FAN_triples', 'FAN_hr',
+            'FAN_rbi', 'FAN_sb', 'FAN_cs', 'FAN_bb', 'FAN_k', 'FAN_k_looking',
+            'FAN_lob', 'FAN_gidp', 'FAN_e', 'FAN_outs', 'FAN_po', 'FAN_rl2o',
+            'FAN_outfield_assists', 'FAN_cycle',
+        ]
+        PIT_FIELDS = [
+            'ip', 'h', 'er', 'bb', 'k', 'hr', 'bs', 'hb', 'wp', 'balks', 'ir', 'irs',
+            'e', 'dpi', 'bra', 'perfect_game', 'no_hitter', 'relief_loss',
+            'FAN_total', 'FAN_ip', 'FAN_h', 'FAN_er', 'FAN_bb', 'FAN_k', 'FAN_hr',
+            'FAN_bs', 'FAN_hb', 'FAN_wp', 'FAN_balks', 'FAN_ir', 'FAN_irs', 'FAN_e',
+            'FAN_dpi', 'FAN_bra', 'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss',
+        ]
+
+        batting = [serialize_stat(s, BAT_FIELDS) for s in BattingStatLine.objects.filter(player=player, date=today_utc)]
+        pitching = [serialize_stat(s, PIT_FIELDS) for s in PitchingStatLine.objects.filter(player=player, date=today_utc)]
+        return {'batting': batting, 'pitching': pitching, 'date': str(today_utc)}
+
     @api.get("statlines/team", response=PaginatedStatlinePerformanceSchema)
     def statlines_team(request, team: str, year: str, page: int = 1):
         PAGE_SIZE = 5
@@ -687,6 +791,7 @@ class MyAPIController:
         player.team_assigned = team
         player.is_owned = True
         player.save()
+        Transaction.objects.create(player=player, team=team, transaction_type=Transaction.ADD)
         return {"success": True}
 
     @api.post("/roster/drop")
@@ -716,6 +821,7 @@ class MyAPIController:
                 lineup.save()
         except Lineup.DoesNotExist:
             pass
+        Transaction.objects.create(player=player, team=team, transaction_type=Transaction.DROP)
         player.team_assigned = None
         player.is_owned = False
         player.save()
@@ -754,6 +860,7 @@ class MyAPIController:
         player.team_assigned = team
         player.is_owned = True
         player.save()
+        Transaction.objects.create(player=player, team=team, transaction_type=Transaction.ADD)
         return {"success": True, "slot": open_slot}
 
     @api.post("/lineup/assign")
@@ -820,83 +927,31 @@ class MyAPIController:
                 }
         return result
 
+    @api.get("/transactions", response=List[TransactionSchema])
+    def transactions(request):
+        qs = Transaction.objects.select_related('player', 'team').order_by('-timestamp')[:200]
+        return [
+            TransactionSchema(
+                id=t.id,
+                player_name=t.player.name,
+                team=t.team.abbreviation,
+                transaction_type=t.transaction_type,
+                timestamp=t.timestamp.isoformat(),
+            )
+            for t in qs
+        ]
+
     @api.get("/lineup/yesterday")
     def lineup_yesterday(request, team: str):
         yesterday = _dt.date.today() - _dt.timedelta(days=1)
         team_obj = get_object_or_404(Team, abbreviation=team)
-        lineup = get_object_or_404(Lineup, lineup_team=team_obj)
-        rs_filter = Q(game_type='R') | Q(game_type__isnull=True)
+        return _lineup_for_date(team_obj, yesterday)
 
-        BAT_FIELDS = [
-            'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
-            'lob', 'sb', 'cs', 'e', 'k_looking', 'rl2o', 'cycle', 'gidp', 'po', 'outfield_assists',
-            'FAN_total', 'FAN_r', 'FAN_h', 'FAN_doubles', 'FAN_triples', 'FAN_hr',
-            'FAN_rbi', 'FAN_sb', 'FAN_cs', 'FAN_bb', 'FAN_k', 'FAN_k_looking',
-            'FAN_lob', 'FAN_gidp', 'FAN_e', 'FAN_outs', 'FAN_po', 'FAN_rl2o',
-            'FAN_outfield_assists', 'FAN_cycle',
-        ]
-        PIT_FIELDS = [
-            'ip', 'h', 'er', 'bb', 'k', 'hr', 'bs', 'hb', 'wp', 'balks', 'ir', 'irs',
-            'e', 'dpi', 'bra', 'perfect_game', 'no_hitter', 'relief_loss',
-            'FAN_total', 'FAN_ip', 'FAN_h', 'FAN_er', 'FAN_bb', 'FAN_k', 'FAN_hr',
-            'FAN_bs', 'FAN_hb', 'FAN_wp', 'FAN_balks', 'FAN_ir', 'FAN_irs', 'FAN_e',
-            'FAN_dpi', 'FAN_bra', 'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss',
-        ]
-
-        def serialize(stat, fields):
-            result = {}
-            for f in fields:
-                v = getattr(stat, f, None)
-                result[f] = float(v) if hasattr(v, '__float__') and v is not None else v
-            return result
-
-        hitter_slots = [
-            'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
-            'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
-            'lineup_DH', 'lineup_UTIL',
-        ]
-        pitcher_slots = [
-            'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
-            'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
-        ]
-
-        hitters = []
-        for slot in hitter_slots:
-            player = getattr(lineup, slot)
-            if not player:
-                continue
-            row = {
-                'player_name': player.name,
-                'fg_id': player.fg_id,
-                'slot': slot.replace('lineup_', ''),
-                'positions': list(player.positions) if player.positions else [],
-                'team_assigned': team_obj.abbreviation,
-                'mlevel':player.mlevel
-            }
-            stat = BattingStatLine.objects.filter(player=player, date=yesterday).filter(rs_filter).first()
-            if stat:
-                row.update(serialize(stat, BAT_FIELDS))
-            hitters.append(row)
-
-        pitchers = []
-        for slot in pitcher_slots:
-            player = getattr(lineup, slot)
-            if not player:
-                continue
-            row = {
-                'player_name': player.name,
-                'fg_id': player.fg_id,
-                'slot': slot.replace('lineup_', ''),
-                'positions': list(player.positions) if player.positions else [],
-                'team_assigned': team_obj.abbreviation,
-                'mlevel':player.mlevel
-            }
-            stat = PitchingStatLine.objects.filter(player=player, date=yesterday).filter(rs_filter).first()
-            if stat:
-                row.update(serialize(stat, PIT_FIELDS))
-            pitchers.append(row)
-
-        return {'hitters': hitters, 'pitchers': pitchers, 'date': str(yesterday)}
+    @api.get("/lineup/today")
+    def lineup_today(request, team: str):
+        today_utc = _dt.datetime.now(_dt.timezone.utc).date()
+        team_obj = get_object_or_404(Team, abbreviation=team)
+        return _lineup_for_date(team_obj, today_utc)
 
     @api.post('/lineup')
     def updateLineup(request, payload: LineupIn):

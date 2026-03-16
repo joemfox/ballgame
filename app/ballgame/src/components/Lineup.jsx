@@ -43,7 +43,7 @@ const HITTER_POSITIONS = ['C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'OF', '
 
 function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging, onDropPlayer, pendingDrop, onConfirmDrop, onCancelDrop }) {
     return (
-        <div ref={forwardRef} className={`${!highlighted ? 'opacity-50' : ''} ${isDragging ? 'opacity-30' : ''} rounded-md border p-1 pl-2 m-1 flex flex-row items-center w-full gap-1`}>
+        <div ref={forwardRef} className={`${isDragging ? 'opacity-30' : ''} rounded-md border p-1 pl-2 m-1 flex flex-row items-center w-full gap-1`}>
             <div className="w-8 shrink-0 text-sm text-center font-bold border-r-2 mr-1 border-border text-muted-foreground">{position}</div>
             <div className="flex-1 min-w-0">
                 {playerInfo.fg_id ? (
@@ -224,7 +224,6 @@ export default function LineupCard({ team, rosterVersion, onRosterChange }) {
                     />
                 </React.Fragment>
             ))}
-            <Button onClick={saveLineup} size="sm" className="mt-1 w-full">Save</Button>
         </div>
     )
 }

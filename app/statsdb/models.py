@@ -1030,3 +1030,20 @@ class DraftPick(BaseModel):
     def __unicode__(self):
         player_name = self.player.name if self.player else 'TBD'
         return f'Pick {self.pick_number}: {self.team.abbreviation} - {player_name}'
+
+
+class Transaction(BaseModel):
+    ADD = 'add'
+    DROP = 'drop'
+    TYPE_CHOICES = [(ADD, 'Add'), (DROP, 'Drop')]
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    transaction_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __unicode__(self):
+        return f'{self.team.abbreviation} {self.transaction_type} {self.player.name}'

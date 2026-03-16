@@ -18,6 +18,7 @@ import PlayerDetail from './pages/PlayerDetail.jsx'
 import Standings from './pages/Standings.jsx'
 import Draft from './pages/Draft.jsx'
 import Settings from './pages/Settings.jsx'
+import Transactions from './pages/Transactions.jsx'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import LineupCard from '@/components/Lineup.jsx'
@@ -183,6 +184,7 @@ function App() {
       <Route path="/standings" element={<Standings />} />
       <Route path="/draft" element={<Draft team={team} isAdmin={isAdmin} />} />
       <Route path="/settings" element={<Settings onTeamUpdate={(abbr) => setTeam(abbr)} />} />
+      <Route path="/transactions" element={<Transactions />} />
     </Routes>
   )
 
@@ -196,6 +198,7 @@ function App() {
             <Link to="/">My Team</Link>
             <Link to="/players">Players</Link>
             <Link to="/standings">Standings</Link>
+            <Link to="/transactions">Transactions</Link>
             <Link to="/draft">Draft</Link>
             <Link to="/settings">Settings</Link>
             <ThemeToggle />
@@ -219,6 +222,7 @@ function App() {
             <Link to="/" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">My Team</Link>
             <Link to="/players" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Players</Link>
             <Link to="/standings" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Standings</Link>
+            <Link to="/transactions" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Transactions</Link>
             <Link to="/draft" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Draft</Link>
             <Link to="/settings" onClick={() => setMenuOpen(false)} className="py-2 hover:text-foreground/70">Settings</Link>
           </nav>

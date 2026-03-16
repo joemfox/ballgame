@@ -108,6 +108,24 @@ function GameLog({ rows, type }) {
     )
 }
 
+const GAME_TYPE_LABELS = {
+    S: 'Spring Training', E: 'Exhibition', A: 'All-Star',
+    D: 'Division Series', L: 'LCS', W: 'World Series', F: 'Wild Card', P: 'Postseason',
+}
+const SPRING_TYPES = new Set(['S', 'E'])
+const POST_TYPES = new Set(['D', 'L', 'W', 'F', 'P', 'A'])
+
+function gameTypeBorderClass(gameType) {
+    if (SPRING_TYPES.has(gameType)) return 'border-green-500 dark:border-green-400'
+    if (POST_TYPES.has(gameType)) return 'border-yellow-500 dark:border-yellow-400'
+    return 'border-border'
+}
+function gameTypeTabClass(gameType) {
+    if (SPRING_TYPES.has(gameType)) return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-500 dark:border-green-400'
+    if (POST_TYPES.has(gameType)) return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-500 dark:border-yellow-400'
+    return 'bg-muted text-muted-foreground border-border'
+}
+
 // [label, rawKey, fanKey] — rawKey is null for Total which has no raw stat
 const HIT_COLS = [
     ['H', 'h', 'FAN_h'], ['2B', 'doubles', 'FAN_doubles'], ['3B', 'triples', 'FAN_triples'],
@@ -185,6 +203,81 @@ function SeasonStatsTable({ stats, cols, globalRanges }) {
     )
 }
 
+function TodayStatlines({ playerid, isPitcher }) {
+    const [data, setData] = useState(null)
+
+    useEffect(() => {
+        axios.get(`/api/statlines/today?playerid=${playerid}`)
+            .then(r => setData(r.data))
+            .catch(() => setData(null))
+    }, [playerid])
+
+    const games = data ? (isPitcher ? data.pitching : data.batting) : []
+    if (!data || !games.length) return null
+
+    const cols = isPitcher ? PITCH_COLS : HIT_COLS
+
+    return (
+        <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Today</p>
+            <div className="space-y-2">
+                {games.map((game, i) => {
+                    const label = game.game_type ? (GAME_TYPE_LABELS[game.game_type] ?? game.game_type) : 'Regular Season'
+                    const isNonR = game.game_type && game.game_type !== 'R'
+                    const borderCls = isNonR ? gameTypeBorderClass(game.game_type) : 'border-border'
+                    const tabCls = isNonR ? gameTypeTabClass(game.game_type) : 'bg-muted text-muted-foreground border-border'
+                    return (
+                        <div key={i} className={`rounded-md border-2 ${borderCls} overflow-hidden`}>
+                            <div className={`px-2 py-0.5 text-xs font-semibold border-b-2 ${tabCls}`}>{label}</div>
+                            <div className="overflow-x-auto">
+                                <table className="text-sm geist-mono border-collapse">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-2 py-1 text-left text-muted-foreground font-medium w-12"></th>
+                                            {cols.map(([lbl, , fanKey]) => {
+                                                const isTotal = fanKey === 'FAN_total'
+                                                return (
+                                                    <th key={lbl} className={`px-2 py-1 text-right font-medium ${isTotal ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300' : 'text-muted-foreground'}`}>{lbl}</th>
+                                                )
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr className="border-t">
+                                            <td className="px-2 py-1 text-muted-foreground">Raw</td>
+                                            {cols.map(([lbl, rawKey, fanKey]) => {
+                                                const isTotal = fanKey === 'FAN_total'
+                                                const val = rawKey != null ? game[rawKey] : null
+                                                return (
+                                                    <td key={lbl} className={`px-2 py-1 text-right tabular-nums${isTotal ? ' bg-orange-50 dark:bg-orange-950/40' : ''}`}>
+                                                        {rawKey != null ? fmt(val) : ''}
+                                                    </td>
+                                                )
+                                            })}
+                                        </tr>
+                                        <tr className="border-t">
+                                            <td className="px-2 py-1 text-muted-foreground">FAN</td>
+                                            {cols.map(([lbl, , fanKey]) => {
+                                                const isTotal = fanKey === 'FAN_total'
+                                                const val = game[fanKey]
+                                                return (
+                                                    <td key={lbl} className={`px-2 py-1 text-right tabular-nums ${isTotal ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''}`}>
+                                                        {fmt(val)}
+                                                    </td>
+                                                )
+                                            })}
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
 export default function PlayerDetail() {
     const { playerid } = useParams()
     const [player, setPlayer] = useState(null)
@@ -240,6 +333,7 @@ export default function PlayerDetail() {
             ) : (
                 <SeasonStatsTable stats={stats} cols={statCols} globalRanges={globalRanges} />
             )}
+            <TodayStatlines playerid={playerid} isPitcher={isPitcher} />
             <GameLog rows={logRows} type={logType} />
         </div>
     )

@@ -223,6 +223,109 @@ function StatTable({ rows, columns }) {
   )
 }
 
+const GAME_TYPE_LABELS = {
+  S: 'Spring Training', E: 'Exhibition', A: 'All-Star',
+  D: 'Division Series', L: 'LCS', W: 'World Series', F: 'Wild Card', P: 'Postseason',
+}
+const SPRING_TYPES = new Set(['S', 'E'])
+const POST_TYPES = new Set(['D', 'L', 'W', 'F', 'P', 'A'])
+
+function gameTypeBorderClass(gameType) {
+  if (SPRING_TYPES.has(gameType)) return 'border-green-500 dark:border-green-400'
+  if (POST_TYPES.has(gameType)) return 'border-yellow-500 dark:border-yellow-400'
+  return 'border-border'
+}
+function gameTypeTabClass(gameType) {
+  if (SPRING_TYPES.has(gameType)) return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-500 dark:border-green-400'
+  if (POST_TYPES.has(gameType)) return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-500 dark:border-yellow-400'
+  return 'bg-muted text-muted-foreground border-border'
+}
+
+function ExtraGameBlock({ game, columns }) {
+  const label = GAME_TYPE_LABELS[game.game_type] ?? game.game_type
+  const borderCls = gameTypeBorderClass(game.game_type)
+  const tabCls = gameTypeTabClass(game.game_type)
+  return (
+    <div className={`mt-1 rounded-md border-2 ${borderCls} overflow-hidden`}>
+      <div className={`px-2 py-0.5 text-xs font-semibold border-b-2 ${tabCls}`}>{label}</div>
+      <div className="overflow-x-auto">
+        <table className="text-sm geist-mono w-full">
+          <tbody>
+            <tr>
+              {columns.map(col => {
+                const key = col.accessorKey
+                const id = col.id ?? key
+                if (!key || id === 'slot') return null
+                const meta = col.meta
+                const v = game[key]
+                const display = v == null ? '-' : (meta?.highlight || key === 'ip') ? Number(v).toFixed(1) : v
+                return (
+                  <td key={id} className={`px-3 py-1 tabular-nums text-right ${id === 'name' ? 'text-left' : ''} ${meta?.highlight ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''}`}>
+                    {display}
+                  </td>
+                )
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function DayLineupTable({ data, scoreType }) {
+  if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>
+
+  const hitCols = [SLOT_COL, ...columnData[`${scoreType}_columns_hit`]]
+  const pitchCols = [SLOT_COL, ...columnData[`${scoreType}_columns_pitch`]]
+
+  const dayTotal = [
+    ...data.hitters.map(r => r.FAN_total ?? 0),
+    ...data.pitchers.map(r => r.FAN_total ?? 0),
+  ].reduce((a, b) => a + b, 0)
+
+  function renderWithExtras(rows, cols) {
+    if (!rows.length) return <p className="text-sm text-muted-foreground">No players in lineup.</p>
+    const nonSlotCols = cols.filter(c => (c.id ?? c.accessorKey) !== 'slot')
+    return (
+      <div className="space-y-1">
+        <StatTable rows={rows} columns={cols} />
+        {rows.some(r => r.extra_games?.length > 0) && (
+          <div className="space-y-3 mt-2">
+            {rows.filter(r => r.extra_games?.length > 0).map(r => (
+              <div key={r.fg_id} className="space-y-0">
+                <p className="text-xs text-muted-foreground font-medium mb-0.5">{r.player_name} — {r.slot}</p>
+                {r.extra_games.map((g, i) => (
+                  <ExtraGameBlock key={i} game={g} columns={nonSlotCols} />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-end">
+        <span className="text-sm font-semibold">
+          <span className="text-muted-foreground font-normal">Team total: </span>
+          <span className="text-orange-800 dark:text-orange-300">{dayTotal.toFixed(1)} FAN pts</span>
+        </span>
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Hitters</p>
+        {renderWithExtras(data.hitters, hitCols)}
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Pitchers</p>
+        {renderWithExtras(data.pitchers, pitchCols)}
+      </div>
+    </div>
+  )
+}
+
 function YesterdayTable({ team }) {
   const [data, setData] = useState(null)
   const [scoreType, setScoreType] = useState('FAN')
@@ -238,15 +341,38 @@ function YesterdayTable({ team }) {
       .catch(() => setData({ hitters: [], pitchers: [], date: '' }))
   }, [team])
 
-  if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="flex rounded-md border overflow-hidden text-sm w-fit">
+          {['FAN', 'RAW'].map(s => (
+            <button key={s} onClick={() => setScoreType(s)}
+              className={`px-3 py-1 ${scoreType === s ? activeClass : inactiveClass}`}>
+              {s === 'FAN' ? 'FAN Pts' : 'Raw Stats'}
+            </button>
+          ))}
+        </div>
+        {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
+      </div>
+      <DayLineupTable data={data} scoreType={scoreType} />
+    </div>
+  )
+}
 
-  const hitCols = [SLOT_COL, ...columnData[`${scoreType}_columns_hit`]]
-  const pitchCols = [SLOT_COL, ...columnData[`${scoreType}_columns_pitch`]]
+function TodayTable({ team }) {
+  const [data, setData] = useState(null)
+  const [scoreType, setScoreType] = useState('FAN')
 
-  const dayTotal = [
-    ...data.hitters.map(r => r.FAN_total ?? 0),
-    ...data.pitchers.map(r => r.FAN_total ?? 0),
-  ].reduce((a, b) => a + b, 0)
+  const activeClass = 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300'
+  const inactiveClass = 'bg-muted text-foreground hover:bg-muted/80'
+
+  useEffect(() => {
+    if (!team) return
+    setData(null)
+    axios.get('/api/lineup/today', { params: { team } })
+      .then(r => setData(r.data))
+      .catch(() => setData({ hitters: [], pitchers: [], date: '' }))
+  }, [team])
 
   return (
     <div className="space-y-6">
@@ -259,20 +385,9 @@ function YesterdayTable({ team }) {
             </button>
           ))}
         </div>
-        {data.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
-        <span className="ml-auto text-sm font-semibold">
-          <span className="text-muted-foreground font-normal">Team total: </span>
-          <span className="text-orange-800 dark:text-orange-300">{dayTotal.toFixed(1)} FAN pts</span>
-        </span>
+        {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
       </div>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Hitters</p>
-        {data.hitters.length ? <StatTable rows={data.hitters} columns={hitCols} /> : <p className="text-sm text-muted-foreground">No hitters in lineup.</p>}
-      </div>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Pitchers</p>
-        {data.pitchers.length ? <StatTable rows={data.pitchers} columns={pitchCols} /> : <p className="text-sm text-muted-foreground">No pitchers in lineup.</p>}
-      </div>
+      <DayLineupTable data={data} scoreType={scoreType} />
     </div>
   )
 }
@@ -367,7 +482,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
         </div>
       </div>
       <div className="flex rounded-md border overflow-hidden text-sm w-fit">
-        {[['season', 'Season'], ['yesterday', 'Yesterday']].map(([val, label]) => (
+        {[['season', 'Season'], ['yesterday', 'Yesterday'], ['today', 'Today']].map(([val, label]) => (
           <button key={val} onClick={() => setView(val)}
             className={`px-3 py-1 ${view === val ? activeClass : inactiveClass}`}>
             {label}
@@ -412,8 +527,10 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
             <BestPerformances team={displayTeam} season={season} />
           </div>
         </>
-      ) : (
+      ) : view === 'yesterday' ? (
         <YesterdayTable team={displayTeam} />
+      ) : (
+        <TodayTable team={displayTeam} />
       )}
     </div>
   )
