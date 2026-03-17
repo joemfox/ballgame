@@ -193,7 +193,8 @@ function TodayStatlines({ playerid, isPitcher }) {
     const [data, setData] = useState(null)
 
     useEffect(() => {
-        axios.get(`/api/statlines/today?playerid=${playerid}`)
+        const localDate = new Date().toLocaleDateString('en-CA')
+        axios.get(`/api/statlines/today?playerid=${playerid}&date=${localDate}`)
             .then(r => setData(r.data))
             .catch(() => setData(null))
     }, [playerid])

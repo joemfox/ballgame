@@ -669,8 +669,14 @@ class MyAPIController:
         return qs.order_by('date')
 
     @api.get("statlines/today")
-    def statlines_today(request, playerid: str):
-        today_utc = _dt.datetime.now(_dt.timezone.utc).date()
+    def statlines_today(request, playerid: str, date: str = None):
+        if date:
+            try:
+                today_utc = _dt.date.fromisoformat(date)
+            except ValueError:
+                today_utc = _dt.datetime.now(_dt.timezone.utc).date()
+        else:
+            today_utc = _dt.datetime.now(_dt.timezone.utc).date()
         player = get_object_or_404(Player.objects.all(), fg_id=playerid)
 
         def serialize_stat(stat, fields):
@@ -955,10 +961,16 @@ class MyAPIController:
         return _lineup_for_date(team_obj, yesterday)
 
     @api.get("/lineup/today")
-    def lineup_today(request, team: str):
-        today_utc = _dt.datetime.now(_dt.timezone.utc).date()
+    def lineup_today(request, team: str, date: str = None):
+        if date:
+            try:
+                today = _dt.date.fromisoformat(date)
+            except ValueError:
+                today = _dt.datetime.now(_dt.timezone.utc).date()
+        else:
+            today = _dt.datetime.now(_dt.timezone.utc).date()
         team_obj = get_object_or_404(Team, abbreviation=team)
-        return _lineup_for_date(team_obj, today_utc)
+        return _lineup_for_date(team_obj, today)
 
     @api.post('/lineup')
     def updateLineup(request, payload: LineupIn):

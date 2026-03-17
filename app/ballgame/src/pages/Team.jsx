@@ -325,7 +325,8 @@ function TodayTable({ team }) {
   useEffect(() => {
     if (!team) return
     setData(null)
-    axios.get('/api/lineup/today', { params: { team } })
+    const localDate = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD in local tz
+    axios.get('/api/lineup/today', { params: { team, date: localDate } })
       .then(r => setData(r.data))
       .catch(() => setData({ hitters: [], pitchers: [], date: '' }))
   }, [team])
