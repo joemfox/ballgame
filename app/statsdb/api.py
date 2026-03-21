@@ -209,6 +209,8 @@ class SeasonBattingStatLineSchema(Schema):
     year: int | None = None
     team_assigned: str | None = None  # team abbreviation or None if unowned
     mlevel: str | None = None
+    role: str | None = None
+    is_injured: bool | None = None
 
 
 class PaginatedSeasonBattingStatLineSchema(Schema):
@@ -267,6 +269,8 @@ class SeasonPitchingStatLineSchema(Schema):
     year: int | None = None
     team_assigned: str | None = None  # team abbreviation or None if unowned
     mlevel: str | None = None
+    role: str | None = None
+    is_injured: bool | None = None
 
 class PaginatedSeasonPitchingStatLineSchema(Schema):
     results: List[SeasonPitchingStatLineSchema]
@@ -341,6 +345,11 @@ class DraftPickIn(Schema):
     player_fg_id: str
 
 
+class AdminDraftPickIn(Schema):
+    player_fg_id: str
+    team_abbr: str
+
+
 class DraftStartIn(Schema):
     order: List[str] | None = None
     rounds: int = 16
@@ -385,6 +394,8 @@ def _lineup_for_date(team_obj, date):
                 'positions': list(player.positions) if player.positions else [],
                 'team_assigned': team_obj.abbreviation,
                 'mlevel': player.mlevel,
+                'role': player.role,
+                'is_injured': player.is_injured,
             }
             all_stats = list(model.objects.filter(player=player, date=date))
             if all_stats:
@@ -528,6 +539,8 @@ class MyAPIController:
                 'year': int(year),
                 'team_assigned': player.team_assigned.abbreviation if player.team_assigned else None,
                 'mlevel': player.mlevel,
+                'role': player.role,
+                'is_injured': player.is_injured,
             }
             if stat:
                 for field in HIT_FIELDS:
@@ -603,6 +616,8 @@ class MyAPIController:
                 'year': int(year),
                 'team_assigned': player.team_assigned.abbreviation if player.team_assigned else None,
                 'mlevel': player.mlevel,
+                'role': player.role,
+                'is_injured': player.is_injured,
             }
             if stat:
                 for field in PITCH_FIELDS:
@@ -933,7 +948,7 @@ class MyAPIController:
                 result[slot] = {
                     'name': p.name, 'first_name': p.first_name, 'last_name': p.last_name,
                     'positions': p.positions, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-                    'raw_age': p.raw_age, 'mlevel': p.mlevel,
+                    'raw_age': p.raw_age, 'mlevel': p.mlevel, 'role': p.role, 'is_injured': p.is_injured,
                     'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
                     'fan_total': hit_totals.get(p.pk) or pitch_totals.get(p.pk),
                 }
@@ -1073,6 +1088,8 @@ class MyAPIController:
         except Exception:
             return api.create_response(request, {"detail": "No team assigned to your account"}, status=400)
         season = utils.get_current_season()
+        if utils.get_current_season_type() == "offseason":
+            season += 1
         draft = get_object_or_404(Draft, year=season)
         if draft.status != 'active':
             return api.create_response(request, {"detail": "Draft is not active"}, status=400)
@@ -1105,6 +1122,8 @@ class MyAPIController:
         if not request.user.is_staff:
             return api.create_response(request, {"detail": "Admin only"}, status=403)
         season = utils.get_current_season()
+        if utils.get_current_season_type() == "offseason":
+            season += 1
         order = payload.order or [t.abbreviation for t in Team.objects.filter(user__isnull=False).order_by('abbreviation')]
         draft, created = Draft.objects.get_or_create(
             year=season,
@@ -1117,6 +1136,41 @@ class MyAPIController:
             draft.current_pick = 1
             draft.save()
         return {"success": True, "year": season, "order": draft.order}
+
+    @api.post("/draft/admin-pick")
+    def admin_draft_pick(request, payload: AdminDraftPickIn):
+        if not request.user.is_authenticated:
+            return api.create_response(request, {"detail": "Not authenticated"}, status=401)
+        if not request.user.is_staff:
+            return api.create_response(request, {"detail": "Admin only"}, status=403)
+        season = utils.get_current_season()
+        if utils.get_current_season_type() == "offseason":
+            season += 1
+        draft = get_object_or_404(Draft, year=season)
+        if draft.status != 'active':
+            return api.create_response(request, {"detail": "Draft is not active"}, status=400)
+        team = get_object_or_404(Team, abbreviation=payload.team_abbr)
+        current_abbr = draft.current_team_abbr()
+        if team.abbreviation != current_abbr:
+            return api.create_response(request, {"detail": f"It is {current_abbr}'s turn, not {team.abbreviation}"}, status=403)
+        player = get_object_or_404(Player, fg_id=payload.player_fg_id)
+        if player.team_assigned is not None:
+            return api.create_response(request, {"detail": "Player is already owned"}, status=409)
+        DraftPick.objects.create(
+            draft=draft,
+            pick_number=draft.current_pick,
+            team=team,
+            player=player,
+        )
+        player.team_assigned = team
+        player.is_owned = True
+        player.save()
+        draft.current_pick += 1
+        n = len(draft.order)
+        if draft.current_pick > draft.rounds * n:
+            draft.status = 'complete'
+        draft.save()
+        return {"success": True, "pick_number": draft.current_pick - 1}
 
     @api.exception_handler(ObjectDoesNotExist)
     def handle_object_does_not_exist(request, exc):

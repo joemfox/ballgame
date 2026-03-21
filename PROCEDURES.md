@@ -78,10 +78,12 @@ In `settings.py`: `CURRENT_SEASON = 2026`, `CURRENT_SEASON_TYPE = "offseason"` â
 docker compose exec django python manage.py download_fg_rosters
 docker compose exec django python manage.py download_fg_free_agents
 docker compose exec django python manage.py load_rosters
+docker compose exec django python manage.py update_status_from_fg_rosters
 docker compose exec django python manage.py fetch_season_statlines 2025
 ```
 `download_mlb_depthcharts` is optional (slow scrape) â€” run it if you want birthdates populated from MLB.com.
 `fetch_season_statlines` is required because fantasy scores are computed game-by-game through the custom scoring pipeline and then aggregated.
+`update_status_from_fg_rosters` sets `mlevel` badges (MLB, AAA, AA, A+, A) from fresh FG depth chart data. Without this, players who were on MLB rosters at the end of the prior season retain stale `mlevel='MLB'` and show no badge even after being sent to the minors.
 
 ### Switch to in-season
 1. Set `CURRENT_SEASON_TYPE = "inseason"` in `settings.py` and rebuild.
@@ -124,8 +126,11 @@ mkdir -p /opt/ballgame/backups
 cp scripts/backup.sh /opt/ballgame/scripts/backup.sh
 chmod +x /opt/ballgame/scripts/backup.sh
 crontab -e
-# Add:
-# 0 2 * * * /opt/ballgame/scripts/backup.sh >> /opt/ballgame/backups/backup.log 2>&1
+# Add (all times UTC):
+# 30 7 * * * /opt/ballgame/scripts/backup.sh >> /opt/ballgame/backups/backup.log 2>&1
+# 0 7 * * * /opt/ballgame/scripts/daily_update.sh >> /opt/ballgame/logs/update.log 2>&1
+# */5 14-23 * * * /opt/ballgame/scripts/live_update.sh >> /opt/ballgame/logs/live_update.log 2>&1
+# */5 0-6 * * * /opt/ballgame/scripts/live_update.sh >> /opt/ballgame/logs/live_update.log 2>&1
 ```
 
 The script reads `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` from the `.env` file in the project root. No other configuration is required.

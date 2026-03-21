@@ -62,11 +62,16 @@ export const FAN_columns_hit = [
         id:'name',
         meta: { pinned: true, width: 150 },
         cell: ({row}) => {
-            const lvl = row.original.mlevel
+            const role = row.original.role
+            const isInjured = row.original.is_injured
+            const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
+            const showMinorBadge = role && MINOR_LEVELS.has(role)
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {lvl ? lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                    {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
+                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{role}</span>}
+                    {!role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
                 </span>
             )
         }
@@ -197,11 +202,16 @@ export const FAN_columns_pitch = [
         id:'name',
         meta: { pinned: true, width: 150 },
         cell: ({row}) => {
-            const lvl = row.original.mlevel
+            const role = row.original.role
+            const isInjured = row.original.is_injured
+            const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
+            const showMinorBadge = role && MINOR_LEVELS.has(role)
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {lvl ? lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                    {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
+                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{role}</span>}
+                    {!role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
                 </span>
             )
         }
@@ -322,11 +332,16 @@ const namePositionColumns = [
         id: 'name',
         meta: { pinned: true, width: 150 },
         cell: ({ row }) => {
-            const lvl = row.original.mlevel
+            const role = row.original.role
+            const isInjured = row.original.is_injured
+            const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
+            const showMinorBadge = role && MINOR_LEVELS.has(role)
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {lvl ? lvl !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{lvl}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                    {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
+                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{role}</span>}
+                    {!role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
                 </span>
             )
         }

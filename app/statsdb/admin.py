@@ -29,8 +29,13 @@ class DraftOrderWidget(forms.Widget):
             'padding:6px 14px;margin:3px 0;background:#f8f8f8;border:1px solid #ccc;'
             'border-radius:3px;cursor:grab;user-select:none;display:flex;'
             'align-items:center;gap:8px;max-width:280px;">'
-            '<span style="color:#aaa;font-size:16px;">⠿</span>{}</li>',
-            ((abbr, abbr) for abbr in order),
+            '<span style="color:#aaa;font-size:16px;">⠿</span>{}'
+            '<button type="button" onclick="this.closest(\'li\').remove();'
+            'document.getElementById(\'{}\').value=JSON.stringify('
+            'Array.from(document.getElementById(\'{}\').querySelectorAll(\'li\')).map(function(li){{return li.dataset.value;}}))'
+            ')" style="margin-left:auto;background:none;border:none;color:#c00;'
+            'cursor:pointer;font-size:14px;padding:0 2px;">×</button></li>',
+            ((abbr, abbr, widget_id, list_id) for abbr in order),
         )
 
         return format_html(

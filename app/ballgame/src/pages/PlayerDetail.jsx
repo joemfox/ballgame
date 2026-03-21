@@ -126,7 +126,7 @@ const PITCH_COLS = [
     ['IP', 'ip', 'FAN_ip'], ['H', 'h', 'FAN_h'], ['ER', 'er', 'FAN_er'],
     ['BB', 'bb', 'FAN_bb'], ['K', 'k', 'FAN_k'], ['HR', 'hr', 'FAN_hr'],
     ['BS', 'bs', 'FAN_bs'], ['HB', 'hb', 'FAN_hb'], ['WP', 'wp', 'FAN_wp'],
-    ['Balks', 'balks', 'FAN_balks'], ['IR', 'ir', 'FAN_ir'], ['IRS', 'irs', 'FAN_irs'],
+    ['Balks', 'balks', 'FAN_balks'], ['IR', 'ir', 'FAN_ir', 'Inherited Runners'], ['IRS', 'irs', 'FAN_irs', 'Inherited Runners Stranded'],
     ['E', 'e', 'FAN_e'], ['BRA', 'bra', 'FAN_bra'], ['DPI', 'dpi', 'FAN_dpi'],
     ['PG', 'perfect_game', 'FAN_perfect_game'], ['NH', 'no_hitter', 'FAN_no_hitter'],
     ['RL', 'relief_loss', 'FAN_relief_loss'], ['Total', null, 'FAN_total'],
@@ -145,10 +145,10 @@ function SeasonStatsTable({ stats, cols, globalRanges }) {
                 <thead className="sticky top-0 z-10 bg-background">
                     <tr>
                         <th className="px-2 py-1 text-left text-muted-foreground font-medium w-12"></th>
-                        {cols.map(([label, , fanKey]) => {
+                        {cols.map(([label, , fanKey, tooltip]) => {
                             const isTotal = fanKey === 'FAN_total'
                             return (
-                                <th key={label} className={`px-2 py-1 text-right font-medium ${isTotal ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300' : 'text-muted-foreground'}`}>{label}</th>
+                                <th key={label} title={tooltip} className={`px-2 py-1 text-right font-medium ${isTotal ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300' : 'text-muted-foreground'}`}>{label}</th>
                             )
                         })}
                     </tr>

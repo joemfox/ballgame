@@ -318,14 +318,14 @@ POINT_VALUES_HIT = {
     "outs_min_1": 1,    # kept for old migration compat
     "outs_min_2": 1.00, # per-out rate for 5th+ outs
     "BB":-.75,
-    'triples':-3,
+    'triples':-4.5,
     'hits_bp_1': 1,
     'hits_bp_2': 2,
     'hits_max_1': -1.50,  # was -0.75
     'hits_max_2': -2.00,  # was -1.00
     'hits_min_2': -2.50,  # was -1.25
-    'cycle':-40,
-    'doubles':-2,
+    'cycle':-100,
+    'doubles':-1.5,
     'outfield_assists':-1,
     'cs':5,
     'e':2,
@@ -393,7 +393,7 @@ POINT_VALUES_PITCH = {
     'hr_max_2':3.5,
     'hr_min_2':4,
     'bs':5,
-    'balks':5,
+    'balks':10,
     'hb':1,
     'bra':1,
     'dpi':-1,

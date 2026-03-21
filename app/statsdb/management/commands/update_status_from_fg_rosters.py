@@ -20,6 +20,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         teams = settings.ROSTER_TEAM_IDS
+        MINOR_LEVELS = {'AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'}
 
         models.Player.objects.all().update(role_type=None, is_injured=False, is_mlb=False, role=None, mlevel=None, is_starter=False, is_bench=False, injury_description=None, is_mlb40man=False)
 
@@ -104,13 +105,19 @@ class Command(BaseCommand):
                         obj.position = utils.normalize_pos(player.get("position", None))
                         obj.positions = player['position'].split('/')
 
-                        if player.get("mlevel", None):
-                            obj.role = player["mlevel"]
-                            obj.mlevel = player["mlevel"]
-                        
-                        elif player.get("role", None):
-                            if player["role"].strip() != "":
-                                obj.role = player["role"]
+                        # FG's "mlevel" = max level ever (always 'MLB' for any player
+                        # with an MLB page). FG's "role" = current assignment
+                        # (e.g. 'AAA', 'AA', 'A+', 'MLB', position abbrev).
+                        # Use "role" as the authoritative current level.
+                        fg_role = str(player.get("role", "") or "").strip()
+                        fg_mlevel = str(player.get("mlevel", "") or "").strip()
+
+                        if fg_role in MINOR_LEVELS or fg_role == 'MLB':
+                            obj.role = fg_role
+                        elif fg_mlevel:
+                            obj.role = fg_mlevel
+                        elif fg_role:
+                            obj.role = fg_role
 
                         if obj.role == "MLB":
                             obj.is_mlb = True
