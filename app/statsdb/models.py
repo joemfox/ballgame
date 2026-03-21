@@ -935,6 +935,15 @@ class RosterSnapshot(BaseModel):
         return f'{self.date} - {self.player.name} ({self.team.abbreviation})'
 
 
+class DailySchedule(models.Model):
+    """Stores the first game time for each date, used as the roster lock time."""
+    date = models.DateField(unique=True)
+    roster_lock_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.date} lock={self.roster_lock_time}'
+
+
 class TeamPitchingStatLine(BaseModel):
     date = models.DateField(null=False)
     games = models.IntegerField(blank=True,null=True)

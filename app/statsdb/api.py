@@ -12,7 +12,7 @@ from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, Draft, DraftPick, Transaction
+from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, Draft, DraftPick, Transaction, DailySchedule
 from ninja import NinjaAPI, Schema, ModelSchema, FilterSchema, Query
 from ninja_extra import (api_controller, NinjaExtraAPI)
 from ninja.errors import ValidationError as NinjaValidationError
@@ -759,6 +759,30 @@ class MyAPIController:
     @api.get("/season")
     def current_season(request):
         return {"season": utils.get_current_season()}
+
+    @api.get("/schedule/lock_time")
+    def roster_lock_time(request, date: str = None):
+        import datetime as _dt
+        if date:
+            try:
+                target_date = _dt.date.fromisoformat(date)
+            except ValueError:
+                target_date = _dt.date.today()
+        else:
+            target_date = _dt.date.today()
+
+        try:
+            sched = DailySchedule.objects.get(date=target_date)
+            lock_time = sched.roster_lock_time
+            now_utc = _dt.datetime.now(_dt.timezone.utc)
+            is_locked = lock_time is not None and lock_time <= now_utc
+            return {
+                'date': str(target_date),
+                'roster_lock_time': lock_time.isoformat() if lock_time else None,
+                'is_locked': is_locked,
+            }
+        except DailySchedule.DoesNotExist:
+            return {'date': str(target_date), 'roster_lock_time': None, 'is_locked': False}
 
     @api.get("/standings/sombrero/{year}")
     def sombrero_standings(request, year: str):
