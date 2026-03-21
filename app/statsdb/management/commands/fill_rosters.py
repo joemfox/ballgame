@@ -59,7 +59,8 @@ class Command(BaseCommand):
                 lineup_RP1=None, lineup_RP2=None, lineup_RP3=None,
             )
             self.stdout.write('Cleared all rosters and lineups.')
-
+            return
+        
         teams = list(Team.objects.all())
         if not teams:
             self.stdout.write(self.style.ERROR('No teams found.'))
