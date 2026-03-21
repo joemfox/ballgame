@@ -1,4 +1,5 @@
 import React, {useEffect,useState} from 'react'
+import axios from 'axios'
 import { BrowserRouter as Router, Routes, Route, Link, useParams } from 'react-router-dom'
 import Cookies from "universal-cookie"
 import { cn } from "@/lib/utils"
@@ -51,6 +52,13 @@ function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [rosterVersion, setRosterVersion] = useState(0)
   const onRosterChange = () => setRosterVersion(v => v + 1)
+  const [draftMode, setDraftMode] = useState(false)
+
+  function handleDraftPick(fgId, _slot, onSuccess) {
+    axios.post('/api/draft/pick', { player_fg_id: fgId })
+      .then(() => { onRosterChange(); onSuccess() })
+      .catch(err => console.error('Draft pick failed:', err))
+  }
 
   useEffect(() => {
     getSession()
@@ -182,7 +190,7 @@ function App() {
       <Route path="/team/:teamid" element={<TeamRoute team={team} rosterVersion={rosterVersion} onRosterChange={onRosterChange}/>} />
       <Route path="/player/:playerid" element={<PlayerDetail />} />
       <Route path="/standings" element={<Standings />} />
-      <Route path="/draft" element={<Draft team={team} isAdmin={isAdmin} />} />
+      <Route path="/draft" element={<Draft team={team} isAdmin={isAdmin} onRosterChange={onRosterChange} setDraftMode={setDraftMode} />} />
       <Route path="/settings" element={<Settings onTeamUpdate={(abbr) => setTeam(abbr)} />} />
       <Route path="/transactions" element={<Transactions />} />
     </Routes>
@@ -238,7 +246,7 @@ function App() {
               className="overflow-hidden border-b"
             >
               <ScrollArea className="h-[70vh]">
-                <LineupCard team={team} rosterVersion={rosterVersion} onRosterChange={onRosterChange}/>
+                <LineupCard team={team} rosterVersion={rosterVersion} onRosterChange={onRosterChange} onDraftPick={draftMode ? handleDraftPick : undefined}/>
               </ScrollArea>
             </div>
             {/* Folder tab */}
@@ -270,7 +278,7 @@ function App() {
                 className={`border-r-2  pt-4 ${cn(isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out")}`}
               >
                 <ScrollArea className="h-[calc(100vh-80px)]">
-                  <LineupCard team={team} rosterVersion={rosterVersion} onRosterChange={onRosterChange}/>
+                  <LineupCard team={team} rosterVersion={rosterVersion} onRosterChange={onRosterChange} onDraftPick={draftMode ? handleDraftPick : undefined}/>
                 </ScrollArea>
               </ResizablePanel>
               <ResizableHandle />

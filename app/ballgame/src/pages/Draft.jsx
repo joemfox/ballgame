@@ -6,10 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const POLL_INTERVAL = 5000
 
-export default function Draft({ team, isAdmin }) {
+export default function Draft({ team, isAdmin, onRosterChange, setDraftMode }) {
     const [draft, setDraft] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+
+    useEffect(() => {
+        if (setDraftMode) setDraftMode(true)
+        return () => { if (setDraftMode) setDraftMode(false) }
+    }, [setDraftMode])
     const [starting, setStarting] = useState(false)
     const [startError, setStartError] = useState(null)
     const [pickError, setPickError] = useState(null)
@@ -37,7 +42,7 @@ export default function Draft({ team, isAdmin }) {
     const makePick = (fg_id) => {
         setPickError(null)
         axios.post('/api/draft/pick', { player_fg_id: fg_id })
-            .then(() => { fetchDraft(); setPickVersion(v => v + 1) })
+            .then(() => { fetchDraft(); setPickVersion(v => v + 1); if (onRosterChange) onRosterChange() })
             .catch(err => setPickError(err.response?.data?.detail || 'Pick failed.'))
     }
 

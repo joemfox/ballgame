@@ -49,7 +49,8 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
                 {playerInfo.fg_id ? (
                     <span className="flex items-start gap-1">
                         <Link to={`/player/${playerInfo.fg_id}`} className="font-light text-sm text-left truncate block hover:underline">{playerInfo.name}</Link>
-                        {playerInfo.mlevel ? playerInfo.mlevel !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{playerInfo.mlevel}</span> : <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                        {playerInfo.role && playerInfo.role !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{playerInfo.role}</span>}
+                        {!playerInfo.role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">FA</span>}
                     </span>
                 ) : (
                     <p className="font-light text-sm text-left truncate text-muted-foreground">—</p>
@@ -78,7 +79,7 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
     )
 }
 
-function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlayer, ...props }) {
+function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlayer, onDraftPick, ...props }) {
     const [playerInfo, setPlayerInfo] = useState({ name: '', stats: '', positions: [], fg_id: null })
     const [pendingDrop, setPendingDrop] = useState(false)
 
@@ -111,10 +112,16 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
             setDisplayLineup(f => ({ ...f, [item.sourceSlot]: displacedFgId || null }))
             fetchNewPlayerInfo(item.id)
         } else if (!item.sourceSlot) {
-            // Drag from stats table — assign to roster via API
-            axios.post('/api/lineup/assign', { slot: db_position, player_id: item.id })
-                .then(() => fetchNewPlayerInfo(item.id))
-                .catch(err => console.error(err))
+            // Drag from stats table
+            if (onDraftPick && !item.team_assigned) {
+                // Free agent in draft mode — make a pick
+                onDraftPick(item.id, db_position, () => fetchNewPlayerInfo(item.id))
+            } else {
+                // Already owned player — just reassign lineup slot
+                axios.post('/api/lineup/assign', { slot: db_position, player_id: item.id })
+                    .then(() => fetchNewPlayerInfo(item.id))
+                    .catch(err => console.error(err))
+            }
         }
     }
 
@@ -160,7 +167,7 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
     )
 }
 
-export default function LineupCard({ team, rosterVersion, onRosterChange }) {
+export default function LineupCard({ team, rosterVersion, onRosterChange, onDraftPick }) {
     const [serverLineup, setServerLineup] = useState({})
     const [displayLineup, setDisplayLineup] = useState({})
     const [teamInfo, setTeamInfo] = useState(null)
@@ -220,7 +227,8 @@ export default function LineupCard({ team, rosterVersion, onRosterChange }) {
                         db_position={playerSlot}
                         player={displayLineup[playerSlot]}
                         setDisplayLineup={setDisplayLineup}
-                        onDropPlayer={handleDropPlayer}
+                        onDropPlayer={onDraftPick ? null : handleDropPlayer}
+                        onDraftPick={onDraftPick}
                     />
                 </React.Fragment>
             ))}

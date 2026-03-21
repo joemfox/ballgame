@@ -321,7 +321,7 @@ export default function DataTable({
                             <TableRow
                                 draggable={true}
                                 key={row.original.fg_id}
-                                dragData={{ id: row.original.fg_id, positions: row.original.positions }}
+                                dragData={{ id: row.original.fg_id, positions: row.original.positions, team_assigned: row.original.team_assigned }}
                                 data-state={row.getIsSelected() && 'selected'}
                                 className="h-8"
                             >

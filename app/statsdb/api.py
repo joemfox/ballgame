@@ -48,6 +48,8 @@ class PlayerSchema(Schema):
     mlbam_id:str | None = None
     fg_id:str | None = None
     fan_total: float | None = None
+    mlevel: str | None = None
+    role: str | None = None
 
     
 class PaginatedPlayerSchema(Schema):
@@ -442,7 +444,7 @@ class MyAPIController:
             'positions': p.positions,
             'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
             'raw_age': p.raw_age, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-            'fan_total': fan_total,
+            'fan_total': fan_total, 'mlevel': p.mlevel, 'role': p.role,
         }
     
     @api.get("/player/{playerid}/season/{year}/hit", response=SeasonBattingStatLineSchema)
@@ -1103,6 +1105,35 @@ class MyAPIController:
             'picks': picks,
         }
 
+    def _assign_draft_pick(self, draft, team, player):
+        """Record the pick, assign to team, advance draft, auto-slot into lineup. Returns slot or None."""
+        DraftPick.objects.create(draft=draft, pick_number=draft.current_pick, team=team, player=player)
+        player.team_assigned = team
+        player.is_owned = True
+        player.save()
+        draft.current_pick += 1
+        if draft.current_pick > draft.rounds * len(draft.order):
+            draft.status = 'complete'
+        draft.save()
+        open_slot = None
+        lineup, _ = Lineup.objects.get_or_create(lineup_team=team)
+        for position in (player.positions or []):
+            for slot in POSITION_SLOTS.get(position, []):
+                if getattr(lineup, slot) is None:
+                    open_slot = slot
+                    break
+            if open_slot:
+                break
+        if not open_slot and any(p in HITTER_POSITIONS for p in (player.positions or [])):
+            for slot in ['lineup_DH', 'lineup_UTIL']:
+                if getattr(lineup, slot) is None:
+                    open_slot = slot
+                    break
+        if open_slot:
+            setattr(lineup, open_slot, player)
+            lineup.save()
+        return open_slot
+
     @api.post("/draft/pick")
     def make_draft_pick(request, payload: DraftPickIn):
         if not request.user.is_authenticated:
@@ -1123,21 +1154,9 @@ class MyAPIController:
         player = get_object_or_404(Player, fg_id=payload.player_fg_id)
         if player.team_assigned is not None:
             return api.create_response(request, {"detail": "Player is already owned"}, status=409)
-        DraftPick.objects.create(
-            draft=draft,
-            pick_number=draft.current_pick,
-            team=team,
-            player=player,
-        )
-        player.team_assigned = team
-        player.is_owned = True
-        player.save()
-        draft.current_pick += 1
-        n = len(draft.order)
-        if draft.current_pick > draft.rounds * n:
-            draft.status = 'complete'
-        draft.save()
-        return {"success": True, "pick_number": draft.current_pick - 1}
+        pick_number = draft.current_pick
+        slot = MyAPIController._assign_draft_pick(None, draft, team, player)
+        return {"success": True, "pick_number": pick_number, "slot": slot}
 
     @api.post("/draft/start")
     def start_draft(request, payload: DraftStartIn):
@@ -1180,21 +1199,9 @@ class MyAPIController:
         player = get_object_or_404(Player, fg_id=payload.player_fg_id)
         if player.team_assigned is not None:
             return api.create_response(request, {"detail": "Player is already owned"}, status=409)
-        DraftPick.objects.create(
-            draft=draft,
-            pick_number=draft.current_pick,
-            team=team,
-            player=player,
-        )
-        player.team_assigned = team
-        player.is_owned = True
-        player.save()
-        draft.current_pick += 1
-        n = len(draft.order)
-        if draft.current_pick > draft.rounds * n:
-            draft.status = 'complete'
-        draft.save()
-        return {"success": True, "pick_number": draft.current_pick - 1}
+        pick_number = draft.current_pick
+        slot = MyAPIController._assign_draft_pick(None, draft, team, player)
+        return {"success": True, "pick_number": pick_number, "slot": slot}
 
     @api.exception_handler(ObjectDoesNotExist)
     def handle_object_does_not_exist(request, exc):
