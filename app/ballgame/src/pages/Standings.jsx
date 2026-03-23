@@ -10,7 +10,7 @@ export default function Standings() {
 
     useEffect(() => {
         axios.get('/api/season')
-            .then(res => setSeason(res.data.season))
+            .then(res => setSeason(res.data.upcoming_season))
             .catch(err => console.error(err))
     }, [])
 

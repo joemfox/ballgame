@@ -16,6 +16,7 @@ from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, Sea
 from ninja import NinjaAPI, Schema, ModelSchema, FilterSchema, Query
 from ninja_extra import (api_controller, NinjaExtraAPI)
 from ninja.errors import ValidationError as NinjaValidationError
+from django.conf import settings
 from .settings import FAN_CATEGORIES_HIT
 from . import utils
 
@@ -727,7 +728,7 @@ class MyAPIController:
     def statlines_team(request, team: str, year: str, page: int = 1):
         PAGE_SIZE = 5
         team_obj = get_object_or_404(Team, abbreviation=team)
-        rs_filter = Q(game_type='R') | Q(game_type__isnull=True)
+        rs_filter = Q(game_type='R')
 
         bat = list(BattingStatLine.objects.filter(
             fantasy_team=team_obj, date__year=year
@@ -760,7 +761,7 @@ class MyAPIController:
 
     @api.get("/season")
     def current_season(request):
-        return {"season": utils.get_current_season()}
+        return {"season": utils.get_current_season(), "upcoming_season": settings.CURRENT_SEASON}
 
     @api.get("/schedule/lock_time")
     def roster_lock_time(request, date: str = None):
@@ -812,8 +813,9 @@ class MyAPIController:
                 .values('team__abbreviation')
                 .annotate(total=Sum('FAN_total'))
         }
+        team_abbrs = set(bat) | set(pitch) or set(team_names)
         result = []
-        for abbr in set(bat) | set(pitch):
+        for abbr in team_abbrs:
             b = bat.get(abbr, 0.0)
             p = pitch.get(abbr, 0.0)
             result.append({'team': abbr, 'team_name': team_names.get(abbr), 'bat_total': b, 'pitch_total': p, 'total': b + p})

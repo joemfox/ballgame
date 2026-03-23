@@ -70,6 +70,8 @@ docker compose exec django python manage.py migrate
 docker compose exec django python manage.py createsuperuser
 ```
 
+`apt install at`
+
 Caddy handles HTTPS automatically via Let's Encrypt. Port 8000 (Django) and port 80/nginx (frontend) are no longer exposed to the internet — all traffic goes through Caddy on 443.
 
 ### Offseason setup (load prior-year stats)

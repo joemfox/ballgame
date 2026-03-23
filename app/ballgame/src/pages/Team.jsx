@@ -392,6 +392,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
 
   const [openPositions, setOpenPositions] = useState([])
   const [season, setSeason] = useState(null)
+  const [upcomingSeason, setUpcomingSeason] = useState(null)
   const [view, setView] = useState('season')
   const [teamInfo, setTeamInfo] = useState(null)
 
@@ -399,7 +400,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
   const inactiveClass = 'bg-muted text-foreground hover:bg-muted/80'
 
   useEffect(() => {
-    axios.get('/api/season').then(r => setSeason(r.data.season)).catch(() => {})
+    axios.get('/api/season').then(r => { setSeason(r.data.season); setUpcomingSeason(r.data.upcoming_season) }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -431,11 +432,11 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
       )}
       <div className="flex flex-col sm:flex-row gap-8 sm:justify-between">
         <div className="space-y-4 flex items-center">
-          <TeamScore team={displayTeam} season={season} />
+          <TeamScore team={displayTeam} season={upcomingSeason} />
         </div>
         <div className="min-w-[200px]">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Sombrero Cup</p>
-          <SombreroTable team={displayTeam} season={season} />
+          <SombreroTable team={displayTeam} season={upcomingSeason} />
         </div>
       </div>
       <div className="flex rounded-md border overflow-hidden text-sm w-fit">
@@ -481,7 +482,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Best Performances</p>
-            <BestPerformances team={displayTeam} season={season} />
+            <BestPerformances team={displayTeam} season={upcomingSeason} />
           </div>
         </>
       ) : view === 'yesterday' ? (
