@@ -507,7 +507,8 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
           if (!lineup[slot]) open.push(pos)
         }
         if (open.includes('OF')) { open.push('LF'); open.push('CF'); open.push('RF') }
-        if (open.includes('UTIL')) open.push(...['C','1B','2B','SS','3B','LF','CF','RF','OF','DH'])
+        if (open.includes('DH')) open.push(...['C','1B','2B','SS','3B','LF','CF','RF','OF','IF','IF-OF'])
+        if (open.includes('UTIL')) open.push(...['C','1B','2B','SS','3B','LF','CF','RF','OF','DH','IF','IF-OF'])
         if (['2B', 'SS', '3B'].some(p => open.includes(p))) { open.push('IF'); open.push('IN') }
         setOpenPositions([...new Set(open)])
       })
