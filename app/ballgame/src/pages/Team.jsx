@@ -145,7 +145,7 @@ const SLOT_COL = {
   cell: ({ row }) => <div className="text-left">{row.getValue('slot')}</div>,
 }
 
-const NON_SUMMABLE = new Set(['slot', 'name', 'positions', 'team_assigned', 'game_type'])
+const NON_SUMMABLE = new Set(['slot', 'name', 'positions', 'team_assigned', 'game_type', 'summary'])
 
 function StatTable({ rows, columns }) {
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() })
@@ -235,6 +235,95 @@ const SPRING_TYPES = new Set(['S', 'E'])
 const POST_TYPES = new Set(['D', 'L', 'W', 'F', 'P', 'A'])
 const GAME_TYPE_SHORT = { S: 'ST', E: 'EX', A: 'AS', D: 'DS', L: 'LCS', W: 'WS', F: 'WC', P: 'PS' }
 
+const HITTER_HIGHLIGHTS = [
+  // [rawKey, fanKey, labelFn]
+  ['hr',              'FAN_hr',              (n)    => `${n} HR`],
+  ['k',               'FAN_k',               (n, r) => r.k_looking > 0 ? `${n} K (${r.k_looking} looking)` : `${n} K`],
+  ['cs',              'FAN_cs',              (n)    => `${n} CS`],
+  ['rl2o',            'FAN_rl2o',            (n)    => `${n} RL2O`],
+  ['gidp',            'FAN_gidp',            (n)    => `${n} GIDP`],
+  ['triples',         'FAN_triples',         (n)    => `${n} 3B`],
+  ['doubles',         'FAN_doubles',         (n)    => `${n} 2B`],
+  ['sb',              'FAN_sb',              (n)    => `${n} SB`],
+  ['bb',              'FAN_bb',              (n)    => `${n} BB`],
+  ['lob',             'FAN_lob',             (n)    => `${n} LOB`],
+  ['e',               'FAN_e',               (n)    => `${n} E`],
+  ['po',              'FAN_po',              (n)    => `${n} PO`],
+  ['outfield_assists','FAN_outfield_assists', (n)    => `${n} OA`],
+  ['cycle',           'FAN_cycle',           ()     => 'Cycle'],
+  ['rbi',             'FAN_rbi',             (n)    => `${n} RBI`],
+  ['r',               'FAN_r',               (n)    => `${n} R`],
+]
+
+const HITTER_SUMMARY_COL = {
+  id: 'summary',
+  header: '',
+  cell: ({ row }) => {
+    const r = row.original
+    if (r.ab == null) return null
+    const base = `${r.h ?? 0}-${r.ab}`
+    const highlights = HITTER_HIGHLIGHTS
+      .filter(([rawKey]) => (r[rawKey] ?? 0) > 0)
+      .map(([rawKey, fanKey, labelFn]) => ({ label: labelFn(r[rawKey], r), impact: Math.abs(r[fanKey] ?? 0) }))
+      .filter(c => c.impact > 0)
+      .sort((a, b) => b.impact - a.impact)
+      .slice(0, 2)
+      .map(c => c.label)
+    return <span className="text-sm text-muted-foreground whitespace-nowrap">{[base, ...highlights].join(', ')}</span>
+  },
+}
+
+function formatIP(ip) {
+  if (ip == null) return null
+  const whole = Math.floor(ip)
+  const frac = Math.round((ip % 1) * 10)
+  if (frac === 0) return whole === 1 ? '1 IP' : `${whole} IP`
+  return whole > 0 ? `${whole} ${frac}/3 IP` : `${frac}/3 IP`
+}
+
+const PITCHER_HIGHLIGHTS = [
+  ['hr',           'FAN_hr',           (n) => `${n} HR`],
+  ['hb',           'FAN_hb',           (n) => `${n} HBP`],
+  ['bs',           'FAN_bs',           (n) => `${n} BS`],
+  ['k',            'FAN_k',            (n) => `${n} K`],
+  ['bb',           'FAN_bb',           (n) => `${n} BB`],
+  ['wp',           'FAN_wp',           (n) => `${n} WP`],
+  ['balks',        'FAN_balks',        (n) => `${n} BALK`],
+  ['e',            'FAN_e',            (n) => `${n} E`],
+  ['ir',           'FAN_ir',           (n) => `${n} IR`],
+  ['dpi',          'FAN_dpi',          (n) => `${n} DPI`],
+  ['relief_loss',  'FAN_relief_loss',  ()  => 'RL'],
+  ['no_hitter',    'FAN_no_hitter',    ()  => 'NH'],
+  ['perfect_game', 'FAN_perfect_game', ()  => 'PG'],
+]
+
+const PITCHER_SUMMARY_COL = {
+  id: 'summary',
+  header: '',
+  cell: ({ row }) => {
+    const r = row.original
+    if (r.ip == null) return null
+    const outs = Math.floor(r.ip) * 3 + Math.round((r.ip % 1) * 10)
+    const bf = outs + (r.h ?? 0) + (r.bb ?? 0) + (r.hb ?? 0)
+    const parts = [`${formatIP(r.ip)} (${bf} BF)`]
+    if ((r.er ?? 0) > 0) parts.push(`${r.er} runs`)
+    const highlights = PITCHER_HIGHLIGHTS
+      .filter(([rawKey]) => (r[rawKey] ?? 0) > 0)
+      .map(([rawKey, fanKey, labelFn]) => ({ label: labelFn(r[rawKey], r), impact: Math.abs(r[fanKey] ?? 0) }))
+      .filter(c => c.impact > 0)
+      .sort((a, b) => b.impact - a.impact)
+      .slice(0, 2)
+      .map(c => c.label)
+    return <span className="text-sm text-muted-foreground whitespace-nowrap">{[...parts, ...highlights].join(', ')}</span>
+  },
+}
+
+function insertAfterFanTotal(cols, summaryCol) {
+  const idx = cols.findIndex(c => c.accessorKey === 'FAN_total')
+  if (idx < 0) return cols
+  return [...cols.slice(0, idx + 1), summaryCol, ...cols.slice(idx + 1)]
+}
+
 const GAME_TYPE_COL = {
   id: 'game_type',
   accessorKey: 'game_type',
@@ -254,8 +343,8 @@ const GAME_TYPE_COL = {
 function DayLineupTable({ data, scoreType }) {
   if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>
 
-  const hitCols = [SLOT_COL, GAME_TYPE_COL, ...columnData[`${scoreType}_columns_hit`]]
-  const pitchCols = [SLOT_COL, GAME_TYPE_COL, ...columnData[`${scoreType}_columns_pitch`]]
+  const hitCols = [SLOT_COL, GAME_TYPE_COL, ...insertAfterFanTotal(columnData[`${scoreType}_columns_hit`], HITTER_SUMMARY_COL)]
+  const pitchCols = [SLOT_COL, GAME_TYPE_COL, ...insertAfterFanTotal(columnData[`${scoreType}_columns_pitch`], PITCHER_SUMMARY_COL)]
 
   const dayTotal = [
     ...data.hitters.filter(r => !r.game_type || r.game_type === 'R').map(r => r.FAN_total ?? 0),

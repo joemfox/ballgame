@@ -837,6 +837,18 @@ class MyAPIController:
             return []
         return Player.objects.filter(team_assigned=team).order_by('name')
 
+    def _transaction_allowed(self, request, team):
+        """Returns an error response if the transaction is not allowed, else None."""
+        if request.user.is_staff:
+            return None
+        if utils.get_current_season_type() == "offseason":
+            season = utils.get_current_season() + 1
+            draft = Draft.objects.filter(year=season, status='active').first()
+            if draft and draft.current_team_abbr() == team.abbreviation:
+                return None
+            return api.create_response(request, {"detail": "Transactions are locked during the offseason"}, status=403)
+        return None
+
     @api.post("/roster/add")
     def roster_add(request, payload: RosterActionSchema):
         if not request.user.is_authenticated:
@@ -845,6 +857,8 @@ class MyAPIController:
             team = request.user.team
         except Exception:
             return api.create_response(request, {"detail": "No team assigned to your account"}, status=400)
+        if err := self._transaction_allowed(request, team):
+            return err
         player = get_object_or_404(Player, fg_id=payload.player_id)
         if player.team_assigned is not None:
             return api.create_response(request, {"detail": "Player is already on a roster"}, status=409)
@@ -862,6 +876,8 @@ class MyAPIController:
             team = request.user.team
         except Exception:
             return api.create_response(request, {"detail": "No team assigned to your account"}, status=400)
+        if err := self._transaction_allowed(request, team):
+            return err
         player = get_object_or_404(Player, fg_id=payload.player_id)
         if player.team_assigned != team:
             return api.create_response(request, {"detail": "Player is not on your roster"}, status=403)
@@ -895,6 +911,8 @@ class MyAPIController:
             team = request.user.team
         except Exception:
             return api.create_response(request, {"detail": "No team assigned to your account"}, status=400)
+        if err := self._transaction_allowed(request, team):
+            return err
         player = get_object_or_404(Player, fg_id=payload.player_id)
         if player.team_assigned is not None:
             return api.create_response(request, {"detail": "Player is already on a roster"}, status=409)
