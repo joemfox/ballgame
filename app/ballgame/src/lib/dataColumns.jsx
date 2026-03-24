@@ -41,6 +41,14 @@ export const statlineColumns_hit = [
     { accessorKey:'FAN_total', header:'FAN_total' },
 ]
 
+const mlbOrgColumn = {
+    accessorKey: 'mlb_org',
+    header: 'MLB',
+    id: 'mlb_org',
+    meta: { pinned: true, width: 50 },
+    cell: ({ row }) => <div className="text-left text-muted-foreground text-xs">{row.getValue('mlb_org') ?? ''}</div>
+}
+
 const fanTotalColumn_hit = {
     accessorKey: "FAN_total",
     meta: { pinned: true, width: 64, highlight: true },
@@ -85,6 +93,7 @@ export const FAN_columns_hit = [
             return <div key={row.id} className="text-left">{positions}</div>
         }
     },
+    mlbOrgColumn,
     {
         accessorKey: 'team_assigned',
         header: 'team',
@@ -225,6 +234,7 @@ export const FAN_columns_pitch = [
             return <div key={row.id} className="text-left">{positions}</div>
         }
     },
+    mlbOrgColumn,
     {
         accessorKey: 'team_assigned',
         header: 'team',
@@ -357,6 +367,7 @@ const namePositionColumns = [
             return <div key={row.id} className="text-left">{positions}</div>
         }
     },
+    mlbOrgColumn,
     {
         accessorKey: 'team_assigned',
         header: 'team',
@@ -426,7 +437,7 @@ export const RAW_columns_pitch = [
 ]
 
 // Columns that should always be visible regardless of viewport
-const ALWAYS_SHOW = new Set(['name', 'positions', 'FAN_total', 'actions', 'team_assigned'])
+const ALWAYS_SHOW = new Set(['name', 'positions', 'FAN_total', 'actions', 'team_assigned', 'mlb_org'])
 const hideStats = cols => cols.map(col =>
     ALWAYS_SHOW.has(col.accessorKey) || ALWAYS_SHOW.has(col.id)
         ? col
