@@ -79,7 +79,7 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
     )
 }
 
-function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlayer, onDraftPick, ...props }) {
+function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlayer, onDraftPick, onSwapSlots, ...props }) {
     const [playerInfo, setPlayerInfo] = useState({ name: '', stats: '', positions: [], fg_id: null })
     const [pendingDrop, setPendingDrop] = useState(false)
 
@@ -111,6 +111,7 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
             // Drag from another lineup slot — swap
             setDisplayLineup(f => ({ ...f, [item.sourceSlot]: displacedFgId || null }))
             fetchNewPlayerInfo(item.id)
+            if (onSwapSlots) onSwapSlots(item.sourceSlot, db_position, item.id, displacedFgId || null)
         } else if (!item.sourceSlot) {
             // Drag from stats table
             if (onDraftPick && !item.team_assigned) {
@@ -193,6 +194,13 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
         setDisplayLineup(lineup)
     }, [serverLineup])
 
+    function handleSwapSlots(sourceSlot, targetSlot, sourceFgId, targetFgId) {
+        const changes = { [targetSlot]: sourceFgId, [sourceSlot]: targetFgId }
+        axios.post('/api/lineup', { team, ...changes })
+            .then(() => refreshLineup())
+            .catch(err => console.error(err))
+    }
+
     function handleDropPlayer(fgId) {
         axios.post('/api/roster/drop', { player_id: fgId })
             .then(() => { refreshLineup(); if (onRosterChange) onRosterChange() })
@@ -229,6 +237,7 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
                         setDisplayLineup={setDisplayLineup}
                         onDropPlayer={onDraftPick ? null : handleDropPlayer}
                         onDraftPick={onDraftPick}
+                        onSwapSlots={onDraftPick ? null : handleSwapSlots}
                     />
                 </React.Fragment>
             ))}

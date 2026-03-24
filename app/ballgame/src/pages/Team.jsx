@@ -269,7 +269,7 @@ const HITTER_SUMMARY_COL = {
       .sort((a, b) => b.impact - a.impact)
       .slice(0, 2)
       .map(c => c.label)
-    return <span className="text-sm text-muted-foreground whitespace-nowrap">{[base, ...highlights].join(', ')}</span>
+    return <span className="text-left text-sm text-muted-foreground whitespace-nowrap">{[base, ...highlights].join(', ')}</span>
   },
 }
 
@@ -314,7 +314,7 @@ const PITCHER_SUMMARY_COL = {
       .sort((a, b) => b.impact - a.impact)
       .slice(0, 2)
       .map(c => c.label)
-    return <span className="text-sm text-muted-foreground whitespace-nowrap">{[...parts, ...highlights].join(', ')}</span>
+    return <span className="text-left text-sm text-muted-foreground whitespace-nowrap">{[...parts, ...highlights].join(', ')}</span>
   },
 }
 
