@@ -196,7 +196,7 @@ function StatTable({ rows, columns }) {
                 return (
                 <td key={cell.id}
                   style={widthStyle}
-                  className={`px-3 py-1.5 tabular-nums text-right ${cell.column.id === 'slot' || cell.column.id === 'name' ? 'text-left' : ''} ${meta?.highlight ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''} ${meta?.className ?? ''}`}>
+                  className={`px-3 py-1.5 tabular-nums text-right ${cell.column.id === 'slot' || cell.column.id === 'name' || cell.column.id === 'summary' ? 'text-left' : ''} ${meta?.highlight ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''} ${meta?.className ?? ''}`}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               )})}
@@ -304,8 +304,9 @@ const PITCHER_SUMMARY_COL = {
     const r = row.original
     if (r.ip == null) return null
     const outs = Math.floor(r.ip) * 3 + Math.round((r.ip % 1) * 10)
-    const bf = outs + (r.h ?? 0) + (r.bb ?? 0) + (r.hb ?? 0)
-    const parts = [`${formatIP(r.ip)} (${bf} BF)`]
+    const br = (r.h ?? 0) + (r.bb ?? 0) + (r.hb ?? 0)
+    const bf = outs + br
+    const parts = [`${formatIP(r.ip)} (${br} BR of ${bf} BF)`]
     if ((r.er ?? 0) > 0) parts.push(`${r.er} runs`)
     const highlights = PITCHER_HIGHLIGHTS
       .filter(([rawKey]) => (r[rawKey] ?? 0) > 0)
