@@ -378,8 +378,7 @@ class Command(BaseCommand):
 
                             p.injury_description = player.get("injurynotes", None)
                             p.mlbam_id = player.get("mlbamid1", None)
-                            p.mlb_org = team_name
-                            p.mlb_org_abbr = team_abbrev
+                            p.mlb_org = team_abbrev
 
                             if player["roster40"] == "Y":
                                 p.is_mlb40man = True

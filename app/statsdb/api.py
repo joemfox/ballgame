@@ -21,6 +21,7 @@ from .settings import FAN_CATEGORIES_HIT
 from . import utils
 
 
+
 api = NinjaExtraAPI()
 
 class TeamSchema(Schema):
@@ -211,6 +212,7 @@ class SeasonBattingStatLineSchema(Schema):
     positions: List[str] | None = None
     year: int | None = None
     team_assigned: str | None = None  # team abbreviation or None if unowned
+    mlb_org: str | None = None
     mlevel: str | None = None
     role: str | None = None
     is_injured: bool | None = None
@@ -271,6 +273,7 @@ class SeasonPitchingStatLineSchema(Schema):
     positions: List[str] | None = None
     year: int | None = None
     team_assigned: str | None = None  # team abbreviation or None if unowned
+    mlb_org: str | None = None
     mlevel: str | None = None
     role: str | None = None
     is_injured: bool | None = None
