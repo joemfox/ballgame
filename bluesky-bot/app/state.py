@@ -7,7 +7,7 @@ The record body stores all fields as separate named values.
 from atproto import Client
 from atproto_client.exceptions import RequestException
 
-COLLECTION = "io.ballgame.bot.posted"
+COLLECTION = "app.bsky.feed.postgate"
 
 
 def _rkey(season: int, event_type: str, game_id: str, player_id: str) -> str:
