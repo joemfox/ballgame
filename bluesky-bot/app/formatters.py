@@ -29,8 +29,8 @@ def _ordinal(n: int) -> str:
 
 def _inning_str(inning: int | None) -> str:
     if inning is None:
-        return "an unknown inning"
-    return f"the {_ordinal(inning)} inning"
+        return ""
+    return f" in the {_ordinal(inning)} inning"
 
 
 def format_near_sombrero(game: SombreroGame) -> str:
@@ -38,7 +38,7 @@ def format_near_sombrero(game: SombreroGame) -> str:
     return (
         f"👀 SOMBRERO WATCH\n"
         f"{game.player_name}{org} is 0-3 with 3 strikeouts "
-        f"in {_inning_str(game.inning)}."
+        f"{_inning_str(game.inning)}."
     )
 
 
