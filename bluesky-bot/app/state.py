@@ -5,7 +5,7 @@ season + event_type + game_id + player_id for O(1) duplicate checks.
 The record body stores all fields as separate named values.
 """
 from atproto import Client
-from atproto_client.exceptions import RequestException
+from atproto_client.exceptions import BadRequestError
 
 COLLECTION = "app.bsky.feed.postgate"
 
@@ -33,8 +33,10 @@ def already_posted(
             }
         )
         return True
-    except RequestException:
-        return False
+    except BadRequestError as e:
+        if e.error == "RecordNotFound":
+            print("No post found")
+            return False
 
 
 def mark_posted(
