@@ -27,10 +27,9 @@ SEASON = int(os.environ.get("SEASON", date.today().year))
 
 def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
     print(f"Running live{' (dry run)' if dry_run else ''}")
-    candidates = db.get_near_sombreros(game_date)
-    if(len(candidates) == 0):
-        print("No sombrero candidates")
-    for game in candidates:
+
+    # Near-sombrero watch (in-progress games)
+    for game in db.get_near_sombreros(game_date):
         if state.already_posted(season, "near_sombrero", game.game_id, game.player_id):
             continue
         text = formatters.format_near_sombrero(game)
@@ -39,10 +38,39 @@ def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
             bluesky.post(client, text)
             state.mark_posted(season, "near_sombrero", game.game_id, game.player_id)
 
+    # Individual tier posts as games complete
+    for game in db.get_sombreros(game_date):
+        if state.already_posted(season, game.event_type, game.game_id, game.player_id):
+            continue
+
+        if game.event_type == "golden_sombrero":
+            season_count  = db.get_season_sombrero_count(season, min_k=4)
+            player_count  = db.get_player_season_sombrero_count(game.player_id, season, min_k=4)
+            text = formatters.format_golden_sombrero(game, season, season_count, player_count)
+
+        elif game.event_type == "platinum_sombrero":
+            season_plat   = db.get_season_sombrero_count(season, min_k=5)
+            season_total  = db.get_season_sombrero_count(season, min_k=4)
+            player_count  = db.get_player_season_sombrero_count(game.player_id, season, min_k=4)
+            text = formatters.format_platinum_sombrero(game, season, season_plat, season_total, player_count)
+
+        elif game.event_type == "ultimate_sombrero":
+            season_count  = db.get_season_sombrero_count(season, min_k=6)
+            player_count  = db.get_player_season_sombrero_count(game.player_id, season, min_k=6)
+            text = formatters.format_ultimate_sombrero(game, season, season_count, player_count)
+
+        else:
+            continue
+
+        print(text)
+        if not dry_run:
+            bluesky.post(client, text)
+            state.mark_posted(season, game.event_type, game.game_id, game.player_id)
+
 
 def run_postgame(client, game_date: date, season: int, dry_run: bool) -> None:
     date_key = game_date.isoformat()
-    sombreros = db.get_completed_sombreros(game_date)
+    sombreros = db.get_sombreros(game_date)
 
     # Post 1: daily sombrero list (one combined post)
     if not state.already_posted(season, "daily_list", date_key, "all"):

@@ -104,8 +104,8 @@ def get_near_sombreros(game_date: date) -> list[SombreroGame]:
     return results
 
 
-def get_completed_sombreros(game_date: date) -> list[SombreroGame]:
-    """Golden/platinum/ultimate sombrero games (k>=4, h=0) for a given date."""
+def get_sombreros(game_date: date) -> list[SombreroGame]:
+    """All golden/platinum/ultimate sombrero statlines (k>=4, h=0) for a given date, including in-progress games."""
     sql = """
         SELECT
             b.id               AS statline_id,
