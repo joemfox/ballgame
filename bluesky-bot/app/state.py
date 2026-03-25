@@ -1,67 +1,45 @@
 """
-Uses the bot's own atproto repo as a state store.
-One record per posted event. The atproto rkey is a composite of
-season + event_type + game_id + player_id for O(1) duplicate checks.
-The record body stores all fields as separate named values.
+SQLite-backed state store. One row per posted event.
+DB file path defaults to /data/state.db (override with STATE_DB env var).
 """
-from atproto import Client
-from atproto_client.exceptions import BadRequestError
+import os
+import sqlite3
+from contextlib import contextmanager
 
-COLLECTION = "app.bsky.feed.postgate"
-
-
-def _rkey(season: int, event_type: str, game_id: str, player_id: str) -> str:
-    # atproto rkeys allow [a-zA-Z0-9._~-]
-    raw = f"{season}-{event_type}-{game_id}-{player_id}"
-    return "".join(c if c.isalnum() or c in "-._~" else "~" for c in raw)
+DB_PATH = os.environ.get("STATE_DB", "/data/state.db")
 
 
-def already_posted(
-    client: Client,
-    handle: str,
-    season: int,
-    event_type: str,
-    game_id: str,
-    player_id: str,
-) -> bool:
-    try:
-        client.com.atproto.repo.get_record(
-            params={
-                "repo": handle,
-                "collection": COLLECTION,
-                "rkey": _rkey(season, event_type, game_id, player_id),
-            }
+@contextmanager
+def _conn():
+    con = sqlite3.connect(DB_PATH)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS posted (
+            season      INTEGER NOT NULL,
+            event_type  TEXT    NOT NULL,
+            game_id     TEXT    NOT NULL,
+            player_id   TEXT    NOT NULL,
+            PRIMARY KEY (season, event_type, game_id, player_id)
         )
-        return True
-    except BadRequestError as e:
-        print(e.response.content)
-        print(e.response.content.error)
-        if e.response.content.error == "RecordNotFound":
-            print("No post found")
-            return False
+    """)
+    try:
+        yield con
+        con.commit()
+    finally:
+        con.close()
 
 
-def mark_posted(
-    client: Client,
-    handle: str,
-    season: int,
-    event_type: str,
-    game_id: str,
-    player_id: str,
-) -> None:
-    rkey = _rkey(season, event_type, game_id, player_id)
-    client.com.atproto.repo.put_record(
-        data={
-            "repo": handle,
-            "collection": COLLECTION,
-            "rkey": rkey,
-            "record": {
-                "$type": COLLECTION,
-                "rkey": rkey,
-                "season": season,
-                "gameId": game_id,
-                "playerId": player_id,
-                "eventType": event_type,
-            },
-        }
-    )
+def already_posted(season: int, event_type: str, game_id: str, player_id: str) -> bool:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT 1 FROM posted WHERE season=? AND event_type=? AND game_id=? AND player_id=?",
+            (season, event_type, game_id, player_id),
+        ).fetchone()
+        return row is not None
+
+
+def mark_posted(season: int, event_type: str, game_id: str, player_id: str) -> None:
+    with _conn() as con:
+        con.execute(
+            "INSERT OR IGNORE INTO posted (season, event_type, game_id, player_id) VALUES (?,?,?,?)",
+            (season, event_type, game_id, player_id),
+        )

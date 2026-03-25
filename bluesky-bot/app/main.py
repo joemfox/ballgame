@@ -25,36 +25,36 @@ import state
 SEASON = int(os.environ.get("SEASON", date.today().year))
 
 
-def run_live(client, handle: str, game_date: date, season: int, dry_run: bool) -> None:
+def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
     print(f"Running live{' (dry run)' if dry_run else ''}")
     candidates = db.get_near_sombreros(game_date)
     if(len(candidates) == 0):
         print("No sombrero candidates")
     for game in candidates:
-        if state.already_posted(client, handle, season, "near_sombrero", game.game_id, game.player_id):
+        if state.already_posted(season, "near_sombrero", game.game_id, game.player_id):
             continue
         text = formatters.format_near_sombrero(game)
         print(text)
         if not dry_run:
             bluesky.post(client, text)
-            state.mark_posted(client, handle, "near_sombrero", game.game_id, game.player_id)
+            state.mark_posted(season, "near_sombrero", game.game_id, game.player_id)
 
 
-def run_postgame(client, handle: str, game_date: date, season: int, dry_run: bool) -> None:
+def run_postgame(client, game_date: date, season: int, dry_run: bool) -> None:
     date_key = game_date.isoformat()
     sombreros = db.get_completed_sombreros(game_date)
 
     # Post 1: daily sombrero list (one combined post)
-    if not state.already_posted(client, handle, season, "daily_list", date_key, "all"):
+    if not state.already_posted(season, "daily_list", date_key, "all"):
         text = formatters.format_daily_sombrero_list(sombreros, game_date)
         print(text)
         print()
         if not dry_run:
             bluesky.post(client, text)
-            state.mark_posted(client, handle, "daily_list", date_key, "all")
+            state.mark_posted(season, "daily_list", date_key, "all")
 
     # Post 2: season standings image (only if at least one sombrero has occurred this season)
-    if not state.already_posted(client, handle, season, "standings", date_key, "all"):
+    if not state.already_posted(season, "standings", date_key, "all"):
         entries = db.get_sombrero_standings(season)
         if entries:
             alt = images.standings_alt_text(entries, season, game_date)
@@ -62,7 +62,7 @@ def run_postgame(client, handle: str, game_date: date, season: int, dry_run: boo
             if not dry_run:
                 img_bytes = images.generate_standings_image(entries, season, game_date)
                 bluesky.post_image(client, text="", image_bytes=img_bytes, alt_text=alt)
-                state.mark_posted(client, handle, "standings", date_key, "all")
+                state.mark_posted(season, "standings", date_key, "all")
 
 
 def main():
@@ -75,14 +75,12 @@ def main():
     args = parser.parse_args()
 
     game_date = datetime.strptime(args.date, "%Y-%m-%d").date()
-    handle = os.environ["BLUESKY_HANDLE"]
-
     client = bluesky.login()
 
     if args.mode == "live":
-        run_live(client, handle, game_date, SEASON, args.dry_run)
+        run_live(client, game_date, SEASON, args.dry_run)
     elif args.mode == "postgame":
-        run_postgame(client, handle, game_date, SEASON, args.dry_run)
+        run_postgame(client, game_date, SEASON, args.dry_run)
 
 
 if __name__ == "__main__":

@@ -65,6 +65,8 @@ services:
       - ./bluesky-bot/.env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-ballgame}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-ballgame}
+    volumes:
+      - bot_state:/data
     restart: unless-stopped
     tty: true
 
@@ -73,3 +75,4 @@ volumes:
   app_data:
   caddy_data:
   caddy_config:
+  bot_state:
