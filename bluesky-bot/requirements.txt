@@ -1,0 +1,7 @@
+atproto
+psycopg2-binary
+Pillow
+fonttools
+brotli
+requests
+rembg[cpu]

@@ -49,8 +49,8 @@ class Command(BaseCommand):
                   unit="game", leave=False, disable=options['no_progress']) as pbar:
             with ThreadPoolExecutor(max_workers=min(workers, len(self.games))) as executor:
                 futures = {
-                    executor.submit(load_one, (d, g, overwrite, gt)): g
-                    for (d, g, gt) in self.games
+                    executor.submit(load_one, (d, g, overwrite, gt, status)): g
+                    for (d, g, gt, status) in self.games
                 }
                 for future in as_completed(futures):
                     try:
@@ -70,7 +70,7 @@ class Command(BaseCommand):
 
         today = now.strftime("%m/%d/%Y")
         sched = [
-            (now, d["game_id"], d.get("game_type"))
+            (now, d["game_id"], d.get("game_type"), d.get("status", ""))
             for d in statsapi.schedule(start_date=today, end_date=today)
         ]
         return sched
@@ -84,14 +84,24 @@ class Command(BaseCommand):
 
 
 
+    FINAL_STATUSES = {"Final", "Game Over", "Completed Early"}
+
     @transaction.atomic
-    def load_game(self, date, game_id, overwrite, game_type):
+    def load_game(self, date, game_id, overwrite, game_type, status=""):
         try:
             box = statsapi.boxscore_data(game_id)
         except KeyError:
             print(f'error parsing game {game_id}, skipping')
             return
         pbp = statsapi.get('game_playByPlay',{'gamePk':game_id})
+        try:
+            linescore = statsapi.get('game_linescore', {'gamePk': game_id})
+            current_inning = linescore.get('currentInning')
+            inning_state = linescore.get('inningState', '').lower()
+            current_inning_half = 'top' if inning_state in ('top', 'middle') else 'bottom' if inning_state in ('bottom', 'end') else None
+        except Exception:
+            current_inning = None
+            current_inning_half = None
         # with open(f'data/test/pbp/box_{game_id}.json','w') as writefile:
         #     writefile.write(json.dumps(pbp))
         batters = []
@@ -192,6 +202,9 @@ class Command(BaseCommand):
             
             statline.lob = batter["lob"]
             statline.sombrero = int(statline.h) == 0 and int(statline.k) >= 4
+            statline.inning = current_inning
+            statline.inning_half = current_inning_half
+            statline.game_complete = status in self.FINAL_STATUSES
             statline.game_type = game_type
             statline.save(force_insert=statline._state.adding)
 

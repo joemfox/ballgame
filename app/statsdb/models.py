@@ -452,6 +452,9 @@ class BattingStatLine(BaseModel):
     po = models.IntegerField(blank=True,null=True)
     outfield_assists = models.IntegerField(blank=True,null=True)
     sombrero = models.BooleanField(default=False)  # h=0 and k>=4
+    inning = models.IntegerField(blank=True, null=True)  # current inning when last updated
+    inning_half = models.CharField(max_length=6, blank=True, null=True)  # 'top' or 'bottom'
+    game_complete = models.BooleanField(null=True)  # null = unknown (historical data)
 
     # fantasy score categories, should cover everything in settings.FAN_CATEGORIES_HIT
     # categories with Func in their expressions have special scoring relying on custom functions added via migrations

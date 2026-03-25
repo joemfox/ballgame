@@ -54,6 +54,20 @@ services:
       - frontend
     restart: unless-stopped
 
+  bluesky-bot:
+    build:
+      context: .
+      dockerfile: ./bluesky-bot/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./bluesky-bot/.env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-ballgame}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-ballgame}
+    restart: unless-stopped
+    tty: true
+
 volumes:
   postgres_data:
   app_data:
