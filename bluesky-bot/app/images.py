@@ -146,7 +146,7 @@ def generate_standings_image(
     font_wm  = ImageFont.truetype(FONT_MONO, 12)
     wm_draw.text(
         (WIDTH - H_PAD, height - FOOTER_H // 2),
-        "sombrero.quest",
+        "bsky @sombrero.quest",
         fill=WATERMARK, font=font_wm, anchor="rm",
     )
     img = Image.alpha_composite(img, wm_layer)
