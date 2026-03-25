@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
@@ -19,7 +19,36 @@ const PERF_COLS = [
   ['SB', 'sb'],
   ['K', 'k'],
   ['FAN', 'FAN_total'],
+  ['', 'summary'],
 ]
+
+function perfSummary(row) {
+  if (row.type === 'H') {
+    const base = row.ab != null ? `${row.h ?? 0}-${row.ab}` : null
+    const bits = []
+    if ((row.hr ?? 0) > 0) bits.push(`${row.hr} HR`)
+    if ((row.rbi ?? 0) > 0) bits.push(`${row.rbi} RBI`)
+    if ((row.r ?? 0) > 0) bits.push(`${row.r} R`)
+    if ((row.sb ?? 0) > 0) bits.push(`${row.sb} SB`)
+    if ((row.bb ?? 0) > 0) bits.push(`${row.bb} BB`)
+    if ((row.k ?? 0) > 0) bits.push(`${row.k} K`)
+    return base ? [base, ...bits].join(', ') : bits.join(', ')
+  }
+  if (row.type === 'P' && row.ip != null) {
+    const whole = Math.floor(row.ip)
+    const frac = Math.round((row.ip % 1) * 10)
+    const ipStr = frac === 0 ? `${whole} IP` : whole > 0 ? `${whole} ${frac}/3 IP` : `${frac}/3 IP`
+    const br = (row.h ?? 0) + (row.bb ?? 0) + (row.hb ?? 0)
+    const outs = whole * 3 + frac
+    const bf = outs + br
+    const parts = [`${ipStr} (${br} BR of ${bf} BF)`]
+    if ((row.er ?? 0) > 0) parts.push(`${row.er} runs`)
+    if ((row.k ?? 0) > 0) parts.push(`${row.k} K`)
+    if ((row.hr ?? 0) > 0) parts.push(`${row.hr} HR`)
+    return parts.join(', ')
+  }
+  return null
+}
 
 function BestPerformances({ team, season }) {
   const [page, setPage] = useState(1)
@@ -45,7 +74,7 @@ function BestPerformances({ team, season }) {
           <thead className="sticky top-0 z-10">
             <tr className="border-b bg-muted/50">
               {PERF_COLS.map(([label, key]) => (
-                <th key={key} className={`px-3 py-2 font-medium text-right first:text-left ${key === 'FAN_total' ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300' : 'text-muted-foreground'}`}>
+                <th key={key} className={`px-3 py-2 font-medium ${key === 'summary' ? 'text-left' : 'text-right first:text-left'} ${key === 'FAN_total' ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300' : 'text-muted-foreground'}`}>
                   {label}
                 </th>
               ))}
@@ -60,10 +89,13 @@ function BestPerformances({ team, season }) {
                   const isDate = key === 'date'
                   const isPlayer = key === 'player_name'
                   const isType = key === 'type'
+                  const isSummary = key === 'summary'
                   const display = val == null ? '-' : (isFan || key === 'ip') ? Number(val).toFixed(1) : val
                   return (
-                    <td key={key} className={`px-3 py-1.5 tabular-nums ${isDate || isPlayer || isType ? 'text-left' : 'text-right'} ${isFan ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''}`}>
-                      {isType && val ? (
+                    <td key={key} className={`px-3 py-1.5 tabular-nums ${isDate || isPlayer || isType || isSummary ? 'text-left' : 'text-right'} ${isFan ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''}`}>
+                      {isSummary ? (
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">{perfSummary(row)}</span>
+                      ) : isType && val ? (
                         <span className={`text-xs px-1 py-0.5 rounded font-semibold ${val === 'H' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>{val}</span>
                       ) : isPlayer && row.fg_id ? (
                         <Link to={`/player/${row.fg_id}`} className="hover:underline">{val}</Link>
@@ -94,6 +126,9 @@ const SLOT_POSITIONS = {
   lineup_SP1: 'SP', lineup_SP2: 'SP', lineup_SP3: 'SP', lineup_SP4: 'SP', lineup_SP5: 'SP',
   lineup_RP1: 'RP', lineup_RP2: 'RP', lineup_RP3: 'RP',
 }
+
+const HITTER_SLOTS = ['lineup_C','lineup_1B','lineup_2B','lineup_SS','lineup_3B','lineup_OF1','lineup_OF2','lineup_OF3','lineup_OF4','lineup_OF5','lineup_DH','lineup_UTIL']
+const PITCHER_SLOTS = ['lineup_SP1','lineup_SP2','lineup_SP3','lineup_SP4','lineup_SP5','lineup_RP1','lineup_RP2','lineup_RP3']
 
 function ordinal(n) {
   const s = ['th','st','nd','rd']
@@ -196,7 +231,7 @@ function StatTable({ rows, columns }) {
                 return (
                 <td key={cell.id}
                   style={widthStyle}
-                  className={`px-3 py-1.5 tabular-nums text-right ${cell.column.id === 'slot' || cell.column.id === 'name' || cell.column.id === 'summary' ? 'text-left' : ''} ${meta?.highlight ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''} ${meta?.className ?? ''}`}>
+                  className={`px-3 py-1.5 tabular-nums ${['slot', 'name', 'game_type', 'summary'].includes(cell.column.id) ? 'text-left' : 'text-right'} ${meta?.highlight ? 'bg-orange-50 dark:bg-orange-950/40 font-bold text-orange-900 dark:text-orange-200' : ''} ${meta?.className ?? ''}`}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               )})}
@@ -372,12 +407,8 @@ function DayLineupTable({ data, scoreType }) {
   )
 }
 
-function YesterdayTable({ team }) {
+function YesterdayTable({ team, scoreType }) {
   const [data, setData] = useState(null)
-  const [scoreType, setScoreType] = useState('FAN')
-
-  const activeClass = 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300'
-  const inactiveClass = 'bg-muted text-foreground hover:bg-muted/80'
 
   useEffect(() => {
     if (!team) return
@@ -389,28 +420,14 @@ function YesterdayTable({ team }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex rounded-md border overflow-hidden text-sm w-fit">
-          {['FAN', 'RAW'].map(s => (
-            <button key={s} onClick={() => setScoreType(s)}
-              className={`px-3 py-1 ${scoreType === s ? activeClass : inactiveClass}`}>
-              {s === 'FAN' ? 'FAN Pts' : 'Raw Stats'}
-            </button>
-          ))}
-        </div>
-        {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
-      </div>
+      {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
       <DayLineupTable data={data} scoreType={scoreType} />
     </div>
   )
 }
 
-function TodayTable({ team }) {
+function TodayTable({ team, scoreType }) {
   const [data, setData] = useState(null)
-  const [scoreType, setScoreType] = useState('FAN')
-
-  const activeClass = 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300'
-  const inactiveClass = 'bg-muted text-foreground hover:bg-muted/80'
 
   useEffect(() => {
     if (!team) return
@@ -423,17 +440,7 @@ function TodayTable({ team }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex rounded-md border overflow-hidden text-sm w-fit">
-          {['FAN', 'RAW'].map(s => (
-            <button key={s} onClick={() => setScoreType(s)}
-              className={`px-3 py-1 ${scoreType === s ? activeClass : inactiveClass}`}>
-              {s === 'FAN' ? 'FAN Pts' : 'Raw Stats'}
-            </button>
-          ))}
-        </div>
-        {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
-      </div>
+      {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
       <DayLineupTable data={data} scoreType={scoreType} />
     </div>
   )
@@ -481,13 +488,36 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
   const readOnly = viewTeam != null && viewTeam !== team
 
   const [openPositions, setOpenPositions] = useState([])
+  const [lineup, setLineup] = useState(null)
   const [season, setSeason] = useState(null)
   const [upcomingSeason, setUpcomingSeason] = useState(null)
   const [view, setView] = useState('season')
+  const [scoreType, setScoreType] = useState('FAN')
   const [teamInfo, setTeamInfo] = useState(null)
 
   const activeClass = 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300'
   const inactiveClass = 'bg-muted text-foreground hover:bg-muted/80'
+
+  const hitSlotMap = useMemo(() => lineup
+    ? Object.fromEntries(HITTER_SLOTS.map(s => [lineup[s]?.fg_id, SLOT_POSITIONS[s]]).filter(([id]) => id))
+    : {}, [lineup])
+  const pitchSlotMap = useMemo(() => lineup
+    ? Object.fromEntries(PITCHER_SLOTS.map(s => [lineup[s]?.fg_id, SLOT_POSITIONS[s]]).filter(([id]) => id))
+    : {}, [lineup])
+  const hitOrder = useMemo(() => lineup
+    ? HITTER_SLOTS.map(s => lineup[s]?.fg_id).filter(Boolean)
+    : null, [lineup])
+  const pitchOrder = useMemo(() => lineup
+    ? PITCHER_SLOTS.map(s => lineup[s]?.fg_id).filter(Boolean)
+    : null, [lineup])
+  const hitSlotCol = useMemo(() => ({
+    id: 'slot', header: 'Slot', meta: { pinned: true, width: 50 },
+    cell: ({ row }) => <div className="text-left text-xs text-muted-foreground font-semibold">{hitSlotMap[row.original.fg_id] ?? ''}</div>,
+  }), [hitSlotMap])
+  const pitchSlotCol = useMemo(() => ({
+    id: 'slot', header: 'Slot', meta: { pinned: true, width: 50 },
+    cell: ({ row }) => <div className="text-left text-xs text-muted-foreground font-semibold">{pitchSlotMap[row.original.fg_id] ?? ''}</div>,
+  }), [pitchSlotMap])
 
   useEffect(() => {
     axios.get('/api/season').then(r => { setSeason(r.data.season); setUpcomingSeason(r.data.upcoming_season) }).catch(() => {})
@@ -502,10 +532,11 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
     if (!displayTeam) return
     axios.get('/api/lineup', { params: { team: displayTeam } })
       .then(res => {
-        const lineup = res.data
+        const lineupData = res.data
+        setLineup(lineupData)
         const open = []
         for (const [slot, pos] of Object.entries(SLOT_POSITIONS)) {
-          if (!lineup[slot]) open.push(pos)
+          if (!lineupData[slot]) open.push(pos)
         }
         if (open.includes('OF')) { open.push('LF'); open.push('CF'); open.push('RF') }
         if (open.includes('DH')) open.push(...['C','1B','2B','SS','3B','LF','CF','RF','OF','IF','IF-OF'])
@@ -530,13 +561,23 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
           <SombreroTable team={displayTeam} season={upcomingSeason} />
         </div>
       </div>
-      <div className="flex rounded-md border overflow-hidden text-sm w-fit">
-        {[['season', 'Season'], ['yesterday', 'Yesterday'], ['today', 'Today']].map(([val, label]) => (
-          <button key={val} onClick={() => setView(val)}
-            className={`px-3 py-1 ${view === val ? activeClass : inactiveClass}`}>
-            {label}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex rounded-md border overflow-hidden text-sm w-fit">
+          {[['season', 'Season'], ['yesterday', 'Yesterday'], ['today', 'Today']].map(([val, label]) => (
+            <button key={val} onClick={() => setView(val)}
+              className={`px-3 py-1 ${view === val ? activeClass : inactiveClass}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex rounded-md border overflow-hidden text-sm w-fit">
+          {['FAN', 'RAW'].map(s => (
+            <button key={s} onClick={() => setScoreType(s)}
+              className={`px-3 py-1 ${scoreType === s ? activeClass : inactiveClass}`}>
+              {s === 'FAN' ? 'FAN Pts' : 'Raw Stats'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {view === 'season' ? (
@@ -551,9 +592,12 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
               onRosterChange={onRosterChange}
               defaultOwnershipFilter="mine"
               ownershipOptions={['mine']}
-              hideControls={false}
-              readOnly={readOnly}
+              hideControls={true}
+              readOnly={true}
               tableHeight="auto"
+              externalScoreType={scoreType}
+              playerOrder={hitOrder}
+              customActionColumn={hitSlotCol}
             />
           </div>
           <div>
@@ -566,9 +610,12 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
               onRosterChange={onRosterChange}
               defaultOwnershipFilter="mine"
               ownershipOptions={['mine']}
-              hideControls={false}
-              readOnly={readOnly}
+              hideControls={true}
+              readOnly={true}
               tableHeight="auto"
+              externalScoreType={scoreType}
+              playerOrder={pitchOrder}
+              customActionColumn={pitchSlotCol}
             />
           </div>
           <div>
@@ -577,9 +624,9 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
           </div>
         </>
       ) : view === 'yesterday' ? (
-        <YesterdayTable team={displayTeam} />
+        <YesterdayTable team={displayTeam} scoreType={scoreType} />
       ) : (
-        <TodayTable team={displayTeam} />
+        <TodayTable team={displayTeam} scoreType={scoreType} />
       )}
     </div>
   )

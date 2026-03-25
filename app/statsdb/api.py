@@ -750,7 +750,7 @@ class MyAPIController:
 
         bat = list(BattingStatLine.objects.filter(
             fantasy_team=team_obj, date__year=year
-        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'player__fg_id', 'h', 'hr', 'r', 'rbi', 'sb', 'k'))
+        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'player__fg_id', 'ab', 'h', 'hr', 'r', 'rbi', 'sb', 'k', 'bb'))
         for row in bat:
             row['type'] = 'H'
             row['player_name'] = row.pop('player__name')
@@ -761,12 +761,13 @@ class MyAPIController:
 
         pitch = list(PitchingStatLine.objects.filter(
             fantasy_team=team_obj, date__year=year
-        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'player__fg_id', 'ip', 'k', 'er', 'hr', 'h'))
+        ).filter(rs_filter).values('date', 'FAN_total', 'player__name', 'player__fg_id', 'ip', 'k', 'er', 'hr', 'h', 'bb', 'hb'))
         for row in pitch:
             row['type'] = 'P'
             row['player_name'] = row.pop('player__name')
             row['fg_id'] = row.pop('player__fg_id')
             row['date'] = str(row['date'])
+            row['ab'] = None
             row['r'] = None
             row['rbi'] = None
             row['sb'] = None

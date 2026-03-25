@@ -40,12 +40,15 @@ export default function DataTable({
     hideControls = false,
     readOnly = false,
     tableHeight = 'calc(100vh - 200px)',
+    playerOrder = null,
+    externalScoreType = null,
 }) {
     const [players, setPlayers] = useState([])
     const [{ pageIndex, pageSize }, setPagination] = useState({ pageIndex: 0, pageSize: 100 })
     const [pageCount, setPageCount] = useState(-1)
     const [season, setSeason] = useState(null)
-    const [scoreType, setScoreType] = useState('FAN')
+    const [_scoreType, setScoreType] = useState('FAN')
+    const scoreType = externalScoreType ?? _scoreType
     const [ownershipFilter, setOwnershipFilter] = useState(defaultOwnershipFilter)
     const [metrics, setMetrics] = useState([])
     const [sumTotal, setSumTotal] = useState(null)
@@ -206,11 +209,37 @@ export default function DataTable({
                     setSumTotal(response.data.sum_total ?? null)
                     setPageCount(count)
                     setPagination({ pageIndex, pageSize: response.data.results.length })
-                    setPlayers(response.data.results)
+                    const sorted = playerOrder
+                        ? [...response.data.results].sort((a, b) => {
+                            const ai = playerOrder.indexOf(a.fg_id)
+                            const bi = playerOrder.indexOf(b.fg_id)
+                            if (ai === -1 && bi === -1) return 0
+                            if (ai === -1) return 1
+                            if (bi === -1) return -1
+                            return ai - bi
+                          })
+                        : response.data.results
+                    setPlayers(sorted)
                 }
             })
             .catch(err => console.error(err))
     }, [type, pageIndex, sorting, filters, positionFilters, season, rosterVersion, ownershipFilter, team])
+
+    // Re-sort when playerOrder changes (e.g. lineup loads after initial fetch)
+    useEffect(() => {
+        if (!playerOrder || !playerOrder.length) return
+        setPlayers(prev => {
+            if (!prev.length) return prev
+            return [...prev].sort((a, b) => {
+                const ai = playerOrder.indexOf(a.fg_id)
+                const bi = playerOrder.indexOf(b.fg_id)
+                if (ai === -1 && bi === -1) return 0
+                if (ai === -1) return 1
+                if (bi === -1) return -1
+                return ai - bi
+            })
+        })
+    }, [playerOrder?.join(',')])
 
     const table = useReactTable({
         data: players,
@@ -263,6 +292,7 @@ export default function DataTable({
                         ))}
                     </div>
                 )}
+                {!externalScoreType && (
                 <div className="flex rounded-md border overflow-hidden text-sm">
                     {['FAN', 'RAW'].map(s => (
                         <button key={s} onClick={() => setScoreType(s)}
@@ -271,6 +301,7 @@ export default function DataTable({
                         </button>
                     ))}
                 </div>
+                )}
                 <div className="flex items-center gap-2 ml-auto">
                     <Input
                         placeholder="Filter by name..."
