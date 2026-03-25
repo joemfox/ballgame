@@ -36,8 +36,8 @@ def _inning_str(inning: int | None) -> str:
 def format_near_sombrero(game: SombreroGame) -> str:
     org = f" ({game.mlb_org})" if game.mlb_org else ""
     return (
-        f"👀 SOMBRERO WATCH\n"
-        f"{game.player_name}{org} is 0-3 with 3 strikeouts "
+        f"👀 SOMBRERO WATCH 👀\n"
+        f"{game.player_name}{org} is 0-3 with 3 strikeouts"
         f"{_inning_str(game.inning)}."
     )
 
