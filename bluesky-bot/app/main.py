@@ -62,6 +62,10 @@ def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
             bluesky.post(client, text)
             state.mark_posted(season, game.event_type, game.game_id, game.player_id)
 
+    if db.has_any_games(game_date) and not db.has_active_games(game_date) and not db.has_unstarted_games(game_date):
+        print("All games complete — running postgame wrap-up")
+        run_postgame(client, game_date, season, dry_run)
+
 
 def run_postgame(client, game_date: date, season: int, dry_run: bool) -> None:
     date_key = game_date.isoformat()

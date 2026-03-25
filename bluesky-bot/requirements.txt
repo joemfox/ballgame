@@ -4,4 +4,5 @@ Pillow
 fonttools
 brotli
 requests
+mlb-statsapi
 rembg[cpu]

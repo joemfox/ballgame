@@ -54,6 +54,57 @@ def _parse_statline_id(statline_id: str, player_mlbam_id: str) -> tuple[str, str
     return game_id, str(player_mlbam_id)
 
 
+def has_unstarted_games(game_date: date) -> bool:
+    """True if the MLB schedule has regular-season games today that haven't produced any statlines yet."""
+    import statsapi
+    date_str = game_date.strftime("%m/%d/%Y")
+    scheduled = {
+        str(g["game_id"])
+        for g in statsapi.schedule(start_date=date_str, end_date=date_str)
+        if g.get("game_type") == "R"
+    }
+    if not scheduled:
+        return False
+    sql = """
+        SELECT DISTINCT split_part(id, '-', 1) AS game_pk
+        FROM statsdb_battingstatline
+        WHERE date = %(date)s AND game_type = 'R'
+    """
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"date": game_date})
+            started = {row[0] for row in cur.fetchall()}
+    return bool(scheduled - started)
+
+
+def has_active_games(game_date: date) -> bool:
+    """True if any regular-season statlines for the date are still in progress."""
+    sql = """
+        SELECT 1 FROM statsdb_battingstatline
+        WHERE date = %(date)s
+          AND game_type = 'R'
+          AND (game_complete = FALSE OR game_complete IS NULL)
+        LIMIT 1
+    """
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"date": game_date})
+            return cur.fetchone() is not None
+
+
+def has_any_games(game_date: date) -> bool:
+    """True if any regular-season statlines exist for the date."""
+    sql = """
+        SELECT 1 FROM statsdb_battingstatline
+        WHERE date = %(date)s AND game_type = 'R'
+        LIMIT 1
+    """
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"date": game_date})
+            return cur.fetchone() is not None
+
+
 def get_near_sombreros(game_date: date) -> list[SombreroGame]:
     """
     Batters currently at exactly k=3, h=0 today (mid-game near-sombrero watch).
