@@ -107,7 +107,7 @@ def has_any_games(game_date: date) -> bool:
 
 def get_near_sombreros(game_date: date) -> list[SombreroGame]:
     """
-    Batters currently at exactly k=3, h=0 today (mid-game near-sombrero watch).
+    Batters currently at exactly k=3 today (mid-game near-sombrero watch).
     Reads from live statlines that realtime_update writes every ~5 min.
     """
     sql = """
@@ -124,7 +124,6 @@ def get_near_sombreros(game_date: date) -> list[SombreroGame]:
         LEFT JOIN statsdb_player p ON p.mlbam_id = b.player_mlbam_id
         WHERE
             b.date = %(date)s
-            AND b.h = 0
             AND b.k = 3
             AND b.game_type = 'R'
             AND (b.game_complete = FALSE OR b.game_complete IS NULL)
@@ -156,7 +155,7 @@ def get_near_sombreros(game_date: date) -> list[SombreroGame]:
 
 
 def get_sombreros(game_date: date) -> list[SombreroGame]:
-    """All golden/platinum/ultimate sombrero statlines (k>=4, h=0) for a given date, including in-progress games."""
+    """All golden/platinum/ultimate sombrero statlines (k>=4) for a given date, including in-progress games."""
     sql = """
         SELECT
             b.id               AS statline_id,
@@ -171,7 +170,6 @@ def get_sombreros(game_date: date) -> list[SombreroGame]:
         LEFT JOIN statsdb_player p ON p.mlbam_id = b.player_mlbam_id
         WHERE
             b.date = %(date)s
-            AND b.h = 0
             AND b.k >= 4
             AND b.game_type = 'R'
         ORDER BY b.k DESC, p.name
@@ -202,10 +200,10 @@ def get_sombreros(game_date: date) -> list[SombreroGame]:
 
 
 def get_season_sombrero_count(season: int, min_k: int = 4) -> int:
-    """Total regular-season games with h=0 and k>=min_k."""
+    """Total regular-season games with k>=min_k."""
     sql = """
         SELECT COUNT(*) FROM statsdb_battingstatline
-        WHERE h = 0 AND k >= %(min_k)s
+        WHERE k >= %(min_k)s
           AND EXTRACT(YEAR FROM date) = %(season)s
           AND game_type = 'R'
     """
@@ -216,11 +214,11 @@ def get_season_sombrero_count(season: int, min_k: int = 4) -> int:
 
 
 def get_player_season_sombrero_count(player_id: str, season: int, min_k: int = 4) -> int:
-    """Player's regular-season games with h=0 and k>=min_k."""
+    """Player's regular-season games with k>=min_k."""
     sql = """
         SELECT COUNT(*) FROM statsdb_battingstatline
         WHERE player_mlbam_id = %(player_id)s
-          AND h = 0 AND k >= %(min_k)s
+          AND k >= %(min_k)s
           AND EXTRACT(YEAR FROM date) = %(season)s
           AND game_type = 'R'
     """
@@ -239,7 +237,7 @@ class SombreroStandingsEntry:
 
 
 def get_sombrero_standings(season: int, top_n: int = 10) -> list[SombreroStandingsEntry]:
-    """Season leaderboard for golden+ sombreros, descending."""
+    """Season leaderboard for golden+ sombreros (k>=4), descending."""
     sql = """
         SELECT
             b.player_mlbam_id,
@@ -249,7 +247,7 @@ def get_sombrero_standings(season: int, top_n: int = 10) -> list[SombreroStandin
         FROM statsdb_battingstatline b
         LEFT JOIN statsdb_player p ON p.mlbam_id = b.player_mlbam_id
         WHERE
-            b.sombrero = TRUE
+            b.k >= 4
             AND EXTRACT(YEAR FROM b.date) = %(season)s
             AND b.game_type = 'R'
         GROUP BY b.player_mlbam_id, p.name, p.mlb_org
