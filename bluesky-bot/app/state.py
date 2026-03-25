@@ -34,9 +34,9 @@ def already_posted(
         )
         return True
     except BadRequestError as e:
-        print(e.content)
-        print(e.content.error)
-        if e.content.error == "RecordNotFound":
+        print(e.response.content)
+        print(e.response.content.error)
+        if e.response.content.error == "RecordNotFound":
             print("No post found")
             return False
 
