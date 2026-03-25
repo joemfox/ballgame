@@ -25,13 +25,13 @@ import state
 SEASON = int(os.environ.get("SEASON", date.today().year))
 
 
-def run_live(client, handle: str, game_date: date, dry_run: bool) -> None:
+def run_live(client, handle: str, game_date: date, season: int, dry_run: bool) -> None:
     print(f"Running live{' (dry run)' if dry_run else ''}")
     candidates = db.get_near_sombreros(game_date)
     if(len(candidates) == 0):
         print("No sombrero candidates")
     for game in candidates:
-        if state.already_posted(client, handle, "near_sombrero", game.game_id, game.player_id):
+        if state.already_posted(client, handle, season, "near_sombrero", game.game_id, game.player_id):
             continue
         text = formatters.format_near_sombrero(game)
         print(text)
@@ -45,7 +45,7 @@ def run_postgame(client, handle: str, game_date: date, season: int, dry_run: boo
     sombreros = db.get_completed_sombreros(game_date)
 
     # Post 1: daily sombrero list (one combined post)
-    if not state.already_posted(client, handle, "daily_list", date_key, "all"):
+    if not state.already_posted(client, handle, season, "daily_list", date_key, "all"):
         text = formatters.format_daily_sombrero_list(sombreros, game_date)
         print(text)
         print()
@@ -54,7 +54,7 @@ def run_postgame(client, handle: str, game_date: date, season: int, dry_run: boo
             state.mark_posted(client, handle, "daily_list", date_key, "all")
 
     # Post 2: season standings image (only if at least one sombrero has occurred this season)
-    if not state.already_posted(client, handle, "standings", date_key, "all"):
+    if not state.already_posted(client, handle, season, "standings", date_key, "all"):
         entries = db.get_sombrero_standings(season)
         if entries:
             alt = images.standings_alt_text(entries, season, game_date)
@@ -80,7 +80,7 @@ def main():
     client = bluesky.login()
 
     if args.mode == "live":
-        run_live(client, handle, game_date, args.dry_run)
+        run_live(client, handle, game_date, SEASON, args.dry_run)
     elif args.mode == "postgame":
         run_postgame(client, handle, game_date, SEASON, args.dry_run)
 
