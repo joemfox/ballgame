@@ -12,17 +12,12 @@ Usage:
   python main.py postgame --date 2026-04-01 --dry-run
 """
 import argparse
-import os
 from datetime import date, datetime
 
 import bluesky
 import db
 import formatters
-import images
 import state
-
-
-SEASON = int(os.environ.get("SEASON", date.today().year))
 
 
 def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
@@ -85,6 +80,7 @@ def run_postgame(client, game_date: date, season: int, dry_run: bool) -> None:
     if not state.already_posted(season, "standings", date_key, "all"):
         entries = db.get_sombrero_standings(season)
         if entries:
+            import images
             alt = images.standings_alt_text(entries, season, game_date)
             print(alt)
             if not dry_run:
@@ -103,12 +99,13 @@ def main():
     args = parser.parse_args()
 
     game_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+    season = game_date.year
     client = bluesky.login()
 
     if args.mode == "live":
-        run_live(client, game_date, SEASON, args.dry_run)
+        run_live(client, game_date, season, args.dry_run)
     elif args.mode == "postgame":
-        run_postgame(client, game_date, SEASON, args.dry_run)
+        run_postgame(client, game_date, season, args.dry_run)
 
 
 if __name__ == "__main__":
