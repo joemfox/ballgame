@@ -35,9 +35,10 @@ def _inning_str(inning: int | None) -> str:
 
 def format_near_sombrero(game: SombreroGame) -> str:
     org = f" ({game.mlb_org})" if game.mlb_org else ""
+    line = f"{game.h}-{game.ab}" if game.h is not None and game.ab is not None else "0-3"
     return (
         f"👀 SOMBRERO WATCH 👀\n"
-        f"{game.player_name}{org} is 0-3 with 3 strikeouts"
+        f"{game.player_name}{org} is {line} with 3 strikeouts"
         f"{_inning_str(game.inning)}."
     )
 

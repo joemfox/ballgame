@@ -45,6 +45,8 @@ class SombreroGame:
     inning: int | None          # current inning when statline was last written (None if unknown)
     inning_half: str | None     # 'top' or 'bottom'
     game_complete: bool | None  # True = final, False = in progress, None = unknown
+    h: int | None
+    ab: int | None
 
 
 def _parse_statline_id(statline_id: str, player_mlbam_id: str) -> tuple[str, str]:
@@ -117,6 +119,8 @@ def get_near_sombreros(game_date: date) -> list[SombreroGame]:
             p.name             AS player_name,
             p.mlb_org,
             b.k,
+            b.h,
+            b.ab,
             b.inning,
             b.inning_half,
             b.game_complete
@@ -149,6 +153,8 @@ def get_near_sombreros(game_date: date) -> list[SombreroGame]:
                 inning=row["inning"],
                 inning_half=row["inning_half"],
                 game_complete=row["game_complete"],
+                h=row["h"],
+                ab=row["ab"],
             )
         )
     return results
@@ -163,6 +169,8 @@ def get_sombreros(game_date: date) -> list[SombreroGame]:
             p.name             AS player_name,
             p.mlb_org,
             b.k,
+            b.h,
+            b.ab,
             b.inning,
             b.inning_half,
             b.game_complete
@@ -194,6 +202,8 @@ def get_sombreros(game_date: date) -> list[SombreroGame]:
                 inning=row["inning"],
                 inning_half=row["inning_half"],
                 game_complete=row["game_complete"],
+                h=row["h"],
+                ab=row["ab"],
             )
         )
     return results
