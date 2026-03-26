@@ -13,6 +13,13 @@ Usage:
 """
 import argparse
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+ET = ZoneInfo("America/New_York")
+
+
+def today_et() -> date:
+    return datetime.now(ET).date()
 
 import bluesky
 import db
@@ -128,7 +135,7 @@ def run_postgame(client, game_date: date, season: int, dry_run: bool) -> None:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["live", "postgame"])
-    parser.add_argument("--date", default=date.today().isoformat(),
+    parser.add_argument("--date", default=today_et().isoformat(),
                         help="Date to process (YYYY-MM-DD), defaults to today")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print posts without sending to Bluesky or writing state")
