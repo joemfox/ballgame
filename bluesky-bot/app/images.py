@@ -7,12 +7,16 @@ is detected by hash comparison and treated as absent.
 import hashlib
 import io
 from datetime import date
+from pathlib import Path
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from rembg import new_session, remove as rembg_remove
 
 from db import SombreroStandingsEntry
+
+HEADSHOT_CACHE_DIR = Path("/data/headshots")
+HEADSHOT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # u2netp is ~4MB; session is created lazily on first headshot fetch
 _rembg_session = None
@@ -75,6 +79,13 @@ def _get_placeholder_hash() -> str | None:
 
 
 def _fetch_headshot(mlb_id: str) -> Image.Image | None:
+    cache_path = HEADSHOT_CACHE_DIR / f"{mlb_id}.png"
+    if cache_path.exists():
+        try:
+            return Image.open(cache_path).convert("RGBA")
+        except Exception:
+            cache_path.unlink(missing_ok=True)
+
     try:
         r = requests.get(HEADSHOT_URL.format(mlb_id=mlb_id), timeout=4)
         if r.status_code != 200:
@@ -85,6 +96,7 @@ def _fetch_headshot(mlb_id: str) -> Image.Image | None:
         img = Image.open(io.BytesIO(r.content)).convert("RGBA")
         img = rembg_remove(img, session=_get_rembg_session())
         img.thumbnail((PORTRAIT_W, PORTRAIT_H), Image.LANCZOS)
+        img.save(cache_path, format="PNG")
         return img
     except Exception:
         return None
