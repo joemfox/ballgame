@@ -28,7 +28,7 @@ import state
 
 
 def log(msg: str) -> None:
-    print(f"[{datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}] {msg}", flush=True)
+    print(f"[{datetime.now(ZoneInfo('UTC')).strftime('%Y-%m-%dT%H:%M:%SZ')}] {msg}", flush=True)
 
 
 def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
