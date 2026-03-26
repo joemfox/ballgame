@@ -647,7 +647,7 @@ class SeasonBattingStatLine(BaseModel):
     FAN_gidp = models.FloatField(blank=True,null=True)
     FAN_po = models.FloatField(blank=True,null=True)
     FAN_outfield_assists = models.FloatField(blank=True,null=True)
-    FAN_total = models.DecimalField(default=0.0, max_digits=10, decimal_places=2, blank=False, null=False)
+    FAN_total = models.DecimalField(default=None, max_digits=10, decimal_places=2, blank=True, null=True)
 
     def __unicode__(self):
         if self.player:
@@ -917,7 +917,7 @@ class SeasonPitchingStatLine(BaseModel):
     FAN_perfect_game = models.FloatField(null=True)
     FAN_no_hitter= models.FloatField(null=True)
     FAN_relief_loss = models.FloatField(null=True)
-    FAN_total = models.DecimalField(default=0.0, max_digits=10, decimal_places=2, blank=False, null=False)
+    FAN_total = models.DecimalField(default=None, max_digits=10, decimal_places=2, blank=True, null=True)
     def __unicode__(self):
         if self.player:
             return f'{self.year} - {self.player.name}'
