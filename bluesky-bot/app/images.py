@@ -116,6 +116,15 @@ def generate_standings_image(
     font_count = ImageFont.truetype(FONT_BOLD, 32 * SCALE)
     font_rank  = ImageFont.truetype(FONT_MONO, 18 * SCALE)
 
+    # Precompute ranks with tie handling
+    ranks = []
+    rank = 1
+    for i, entry in enumerate(entries):
+        if i > 0 and entry.sombrero_count < entries[i - 1].sombrero_count:
+            rank = i + 1
+        ranks.append(rank)
+    tied = {r for r in ranks if ranks.count(r) > 1}
+
     for i in range(n_rows):
         y  = table_y + i * ROW_H
         cy = y + ROW_H // 2
@@ -125,16 +134,21 @@ def generate_standings_image(
             draw.line([(RULE_PAD, y), (WIDTH - RULE_PAD, y)], fill=RULE, width=1)
 
         if i >= len(entries):
-            draw.text((X_RANK, cy), f"{i + 1}.", fill=SUBTEXT, font=font_rank, anchor="lm")
+            # Compute the next sequential rank after all entries
+            next_rank = ranks[-1] + len([r for r in ranks if r == ranks[-1]]) if ranks else i + 1
+            display_rank = next_rank + (i - len(entries))
+            draw.text((X_RANK, cy), f"{display_rank}.", fill=SUBTEXT, font=font_rank, anchor="lm")
             if i == len(entries):
                 draw.text((X_NAME, cy), "Everyone Else", fill=SUBTEXT, font=font_name, anchor="lm")
                 draw.text((X_COUNT, cy), "0", fill=SUBTEXT, font=font_count, anchor="rm")
             continue
 
         entry = entries[i]
+        r = ranks[i]
+        rank_label = f"T{r}." if r in tied else f"{r}."
 
         # Rank
-        draw.text((X_RANK, cy), f"{i + 1}.", fill=SUBTEXT, font=font_rank, anchor="lm")
+        draw.text((X_RANK, cy), rank_label, fill=SUBTEXT, font=font_rank, anchor="lm")
 
         # Portrait (blank space reserved if unavailable)
         portrait = _fetch_headshot(entry.player_id)
@@ -145,8 +159,7 @@ def generate_standings_image(
             img.paste(portrait, (portrait_x, portrait_y), mask=portrait)
 
         # Name + org
-        org = f" ({entry.mlb_org})" if entry.mlb_org else ""
-        draw.text((X_NAME, cy), f"{entry.player_name}{org}", fill=TEXT, font=font_name, anchor="lm")
+        draw.text((X_NAME, cy), entry.player_name, fill=TEXT, font=font_name, anchor="lm")
 
         # Count
         draw.text((X_COUNT, cy), str(entry.sombrero_count), fill=GOLD, font=font_count, anchor="rm")
