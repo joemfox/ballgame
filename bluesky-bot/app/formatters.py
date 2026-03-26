@@ -108,7 +108,7 @@ TIER_ORDER = ["ultimate_sombrero", "platinum_sombrero", "golden_sombrero"]
 
 def format_daily_sombrero_list(games: list[SombreroGame], game_date) -> str:
     date_str = game_date.strftime("%B %-d")
-    lines = [f"Today's sombreros ({date_str}):\n"]
+    lines = [f"Today's sombreros ({date_str}):"]
 
     sorted_games = sorted(games, key=lambda g: TIER_ORDER.index(g.event_type))
 

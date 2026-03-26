@@ -14,8 +14,15 @@ from rembg import new_session, remove as rembg_remove
 
 from db import SombreroStandingsEntry
 
-# u2netp is ~4MB and fast on CPU; session is created once per process
-_rembg_session = new_session("u2netp")
+# u2netp is ~4MB; session is created lazily on first headshot fetch
+_rembg_session = None
+
+
+def _get_rembg_session():
+    global _rembg_session
+    if _rembg_session is None:
+        _rembg_session = new_session("u2netp")
+    return _rembg_session
 
 FONT_MONO  = "/app/assets/fonts/GeistMono-Regular.ttf"
 FONT_BOLD  = "/app/assets/fonts/Geist-Bold.ttf"
@@ -36,8 +43,8 @@ H_PAD           = 32   * SCALE
 HEADER_H        = 110  * SCALE
 DATE_BOTTOM_PAD = 6    * SCALE   # extra space between date and header rule
 RULE_PAD        = 20   * SCALE   # horizontal margin for table row rules
-TABLE_TOP_PAD   = 14   * SCALE   # extra space between header rule and first row
-ROW_H           = 64   * SCALE
+TABLE_TOP_PAD   = 13   * SCALE   # extra space between header rule and first row
+ROW_H           = 73   * SCALE
 FOOTER_H        = 36   * SCALE
 PORTRAIT_H      = 65   * SCALE
 PORTRAIT_W      = 49   * SCALE
@@ -76,7 +83,7 @@ def _fetch_headshot(mlb_id: str) -> Image.Image | None:
         if placeholder and hashlib.md5(r.content).hexdigest() == placeholder:
             return None
         img = Image.open(io.BytesIO(r.content)).convert("RGBA")
-        img = rembg_remove(img, session=_rembg_session)
+        img = rembg_remove(img, session=_get_rembg_session())
         img.thumbnail((PORTRAIT_W, PORTRAIT_H), Image.LANCZOS)
         return img
     except Exception:
