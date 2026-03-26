@@ -1,6 +1,34 @@
 import { Button } from "@/components/ui/button"
 import { Link } from 'react-router-dom'
 
+
+const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
+
+function makeNameCell(showAllRoles = false) {
+    return {
+        accessorKey: 'player_name',
+        header: 'name',
+        id: 'name',
+        meta: { pinned: true, width: 150 },
+        cell: ({ row }) => {
+            const level = row.original.level
+            const role = row.original.role
+            const isInjured = row.original.is_injured
+            const showMinorBadge = level && MINOR_LEVELS.has(level)
+            const showRole = level === 'MLB' && role && (showAllRoles || /bench/i.test(role))
+            return (
+                <span className="flex items-center gap-1">
+                    <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
+                    {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
+                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{level}</span>}
+                    {showRole && <span className="text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold leading-none shrink-0">{role}</span>}
+                    {!level && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                </span>
+            )
+        }
+    }
+}
+
 const sortableHeader = ({ column, key, title }) => {
     return (
         <Button
@@ -64,26 +92,7 @@ const fanTotalColumn_pitch = {
 }
 
 export const FAN_columns_hit = [
-    {
-        accessorKey:'player_name',
-        header: 'name',
-        id:'name',
-        meta: { pinned: true, width: 150 },
-        cell: ({row}) => {
-            const role = row.original.role
-            const isInjured = row.original.is_injured
-            const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
-            const showMinorBadge = role && MINOR_LEVELS.has(role)
-            return (
-                <span className="flex items-center gap-1">
-                    <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
-                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{role}</span>}
-                    {!role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
-                </span>
-            )
-        }
-    },
+    makeNameCell(),
     {
         accessorKey: 'positions',
         header: "pos",
@@ -193,26 +202,7 @@ export const FAN_columns_hit = [
 ]
 
 export const FAN_columns_pitch = [
-    {
-        accessorKey:'player_name',
-        header: 'name',
-        id:'name',
-        meta: { pinned: true, width: 150 },
-        cell: ({row}) => {
-            const role = row.original.role
-            const isInjured = row.original.is_injured
-            const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
-            const showMinorBadge = role && MINOR_LEVELS.has(role)
-            return (
-                <span className="flex items-center gap-1">
-                    <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
-                    {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
-                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{role}</span>}
-                    {!role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
-                </span>
-            )
-        }
-    },
+    makeNameCell(),
     {
         accessorKey: 'positions',
         header: "pos",
@@ -323,16 +313,18 @@ const namePositionColumns = [
         id: 'name',
         meta: { pinned: true, width: 150 },
         cell: ({ row }) => {
+            const level = row.original.level
             const role = row.original.role
             const isInjured = row.original.is_injured
             const MINOR_LEVELS = new Set(['AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'])
-            const showMinorBadge = role && MINOR_LEVELS.has(role)
+            const showMinorBadge = level && MINOR_LEVELS.has(level)
             return (
                 <span className="flex items-center gap-1">
                     <Link to={`/player/${row.original.fg_id}`} className="hover:underline">{row.getValue('name')}</Link>
                     {isInjured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">IL</span>}
-                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{role}</span>}
-                    {!role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
+                    {showMinorBadge && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{level}</span>}
+                    {level === 'MLB' && role && <span className="text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold leading-none shrink-0">{role}</span>}
+                    {!level && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">Free Agent</span>}
                 </span>
             )
         }
@@ -413,10 +405,18 @@ const hideStats = cols => cols.map(col =>
         : { ...col, meta: { ...(col.meta ?? {}), className: 'xl:table-cell' } }
 )
 
-export default {
-    FAN_columns_hit: hideStats(FAN_columns_hit),
-    FAN_columns_pitch: hideStats(FAN_columns_pitch),
-    RAW_columns_hit: hideStats(RAW_columns_hit),
-    RAW_columns_pitch: hideStats(RAW_columns_pitch),
-    statlineColumns_hit
+function withNameCell(cols, showAllRoles) {
+    return cols.map(col => col.id === 'name' ? makeNameCell(showAllRoles) : col)
 }
+
+export function getColumns(showAllRoles = false) {
+    return {
+        FAN_columns_hit: hideStats(withNameCell(FAN_columns_hit, showAllRoles)),
+        FAN_columns_pitch: hideStats(withNameCell(FAN_columns_pitch, showAllRoles)),
+        RAW_columns_hit: hideStats(withNameCell(RAW_columns_hit, showAllRoles)),
+        RAW_columns_pitch: hideStats(withNameCell(RAW_columns_pitch, showAllRoles)),
+        statlineColumns_hit,
+    }
+}
+
+export default getColumns()

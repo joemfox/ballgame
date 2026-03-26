@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
 import StatlineTable from '@/components/StatlineTable.jsx'
-import columnData from '@/lib/dataColumns'
+import { getColumns } from '@/lib/dataColumns'
+const columnData = getColumns(true)
 
 const PERF_COLS = [
   ['Date', 'date'],
@@ -589,6 +590,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
               externalScoreType={scoreType}
               playerOrder={hitOrder}
               customActionColumn={hitSlotCol}
+              showAllRoles={true}
             />
           </div>
           <div>
@@ -607,6 +609,7 @@ export default function Team({ team, viewTeam, rosterVersion = 0, onRosterChange
               externalScoreType={scoreType}
               playerOrder={pitchOrder}
               customActionColumn={pitchSlotCol}
+              showAllRoles={true}
             />
           </div>
           <div>

@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PositionSelectDropdown } from './PositionDropdown'
-import columnData from '../lib/dataColumns'
+import { getColumns } from '../lib/dataColumns'
 
 // Maps raw stat keys to their FAN equivalents for color-direction lookup
 const RAW_TO_FAN = {
@@ -42,6 +42,7 @@ export default function DataTable({
     tableHeight = 'calc(100vh - 200px)',
     playerOrder = null,
     externalScoreType = null,
+    showAllRoles = false,
 }) {
     const [players, setPlayers] = useState([])
     const [{ pageIndex, pageSize }, setPagination] = useState({ pageIndex: 0, pageSize: 100 })
@@ -57,7 +58,7 @@ export default function DataTable({
     const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640)
     const tableWrapperRef = useRef(null)
 
-    const baseColumns = columnData[`${scoreType}_columns_${type}`]
+    const baseColumns = getColumns(showAllRoles)[`${scoreType}_columns_${type}`]
 
     const actionColumn = {
         id: 'actions',

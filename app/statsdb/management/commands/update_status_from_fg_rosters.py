@@ -22,7 +22,7 @@ class Command(BaseCommand):
         teams = settings.ROSTER_TEAM_IDS
         MINOR_LEVELS = {'AAA', 'AA', 'A+', 'A', 'A-', 'R', 'Rk'}
 
-        models.Player.objects.all().update(role_type=None, is_injured=False, is_mlb=False, role=None, mlevel=None, is_starter=False, is_bench=False, injury_description=None, is_mlb40man=False)
+        models.Player.objects.all().update(role=None, level=None, is_injured=False, is_mlb=False, mlevel=None, is_starter=False, is_bench=False, injury_description=None, is_mlb40man=False)
 
         for team_id, team_abbrev, team_name in teams:
             with open(f"data/rosters/{team_abbrev}_roster.json", "r") as readfile:
@@ -95,13 +95,13 @@ class Command(BaseCommand):
                     if obj:
                         obj.is_injured = False
                         obj.is_mlb = False
+                        obj.level = None
                         obj.role = None
                         obj.is_starter = False
                         obj.is_bench = False
                         obj.injury_description = None
                         obj.is_mlb40man = False
-                        obj.role_type = None
-                        
+
                         obj.position = utils.normalize_pos(player.get("position", None))
                         obj.positions = player['position'].split('/')
 
@@ -113,53 +113,30 @@ class Command(BaseCommand):
                         fg_mlevel = str(player.get("mlevel", "") or "").strip()
 
                         if fg_role in MINOR_LEVELS or fg_role == 'MLB':
-                            obj.role = fg_role
+                            obj.level = fg_role
                         elif fg_mlevel:
-                            obj.role = fg_mlevel
+                            obj.level = fg_mlevel
                         elif fg_role:
-                            obj.role = fg_role
+                            obj.level = fg_role
 
-                        if obj.role == "MLB":
+                        if obj.level == "MLB":
                             obj.is_mlb = True
+                            # For MLB players, fg_role is descriptive (e.g. "SP2", "Bench", "CL", "8")
+                            if fg_role and fg_role != 'MLB':
+                                obj.role = fg_role
 
                         if player.get('type', None):
+                            if "il" in player["type"]:
+                                obj.is_injured = True
+
                             if player["type"] == "mlb-bp":
                                 obj.is_bullpen = True
 
-                            if player["type"] == "mlb-sp":
+                            if player["type"] in ("mlb-sp", "mlb-sl"):
                                 obj.is_starter = True
 
                             if player["type"] == "mlb-bn":
                                 obj.is_bench = True
-
-                            if player["type"] == "mlb-sl":
-                                obj.is_starter = True
-
-                            obj.role_type = player['type']
-
-                            if "il" in player["type"]:
-                                obj.is_injured = True
-
-                            if "sp" in player['type']:
-                                obj.role_type = "SP"
-
-                            if "sl" in player['type']:
-                                obj.role_type = "ST"
-
-                            if "rp" in player['type']:
-                                obj.role_type = "RP"
-
-                            if "bp" in player['type']:
-                                obj.role_type = "RP"
-
-                            if "pp" in player['type']:
-                                obj.role_type = "PP"
-
-                            if "bn" in player['type']:
-                                obj.role_type = "BN"
-
-                            if "il" in player['type']:
-                                obj.role_type = "IL"
 
                         obj.injury_description = player.get("injurynotes", None)
 

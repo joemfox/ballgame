@@ -283,8 +283,8 @@ class Player(BaseModel):
     is_player_pool = models.BooleanField(default=False)
     is_injured = models.BooleanField(default=False)
     injury_description = models.CharField(max_length=255, null=True, blank=True)
-    role = models.CharField(max_length=255, null=True, blank=True)
-    role_type = models.CharField(max_length=255, null=True, blank=True)
+    level = models.CharField(max_length=255, null=True, blank=True)  # MLB, AAA, AA, etc.
+    role = models.CharField(max_length=255, null=True, blank=True)   # BN, SP, RP, IL, etc.
     roster_status = models.CharField(max_length=255, null=True, blank=True)
     mlb_org = models.CharField(max_length=255, null=True, blank=True)
     is_mlb40man = models.BooleanField(default=False)

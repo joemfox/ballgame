@@ -328,6 +328,7 @@ class Command(BaseCommand):
             is_mlb40man=False,
             is_bullpen=False,
             injury_description="",
+            level="",
             role="",
             mlb_org="",
         )
@@ -350,7 +351,7 @@ class Command(BaseCommand):
                                 pass
 
                         if p:
-                            p.role = player["role"]
+                            p.level = player["role"]
 
                             if "pp" in player["type"]:
                                 p.is_player_pool = True

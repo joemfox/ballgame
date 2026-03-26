@@ -51,6 +51,7 @@ class PlayerSchema(Schema):
     fg_id:str | None = None
     fan_total: float | None = None
     mlevel: str | None = None
+    level: str | None = None
     role: str | None = None
     mlb_org: str | None = None
 
@@ -215,6 +216,7 @@ class SeasonBattingStatLineSchema(Schema):
     team_assigned: str | None = None  # team abbreviation or None if unowned
     mlb_org: str | None = None
     mlevel: str | None = None
+    level: str | None = None
     role: str | None = None
     is_injured: bool | None = None
 
@@ -276,6 +278,7 @@ class SeasonPitchingStatLineSchema(Schema):
     team_assigned: str | None = None  # team abbreviation or None if unowned
     mlb_org: str | None = None
     mlevel: str | None = None
+    level: str | None = None
     role: str | None = None
     is_injured: bool | None = None
 
@@ -401,6 +404,7 @@ def _lineup_for_date(team_obj, date):
                 'positions': list(player.positions) if player.positions else [],
                 'team_assigned': team_obj.abbreviation,
                 'mlevel': player.mlevel,
+                'level': player.level,
                 'role': player.role,
                 'is_injured': player.is_injured,
             }
@@ -462,7 +466,7 @@ class MyAPIController:
             'positions': p.positions,
             'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
             'raw_age': p.raw_age, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-            'fan_total': fan_total, 'mlevel': p.mlevel, 'role': p.role, 'mlb_org': p.mlb_org,
+            'fan_total': fan_total, 'mlevel': p.mlevel, 'level': p.level, 'role': p.role, 'mlb_org': p.mlb_org,
         }
     
     @api.get("/player/{playerid}/season/{year}/hit", response=SeasonBattingStatLineSchema)
@@ -560,6 +564,7 @@ class MyAPIController:
                 'team_assigned': player.team_assigned.abbreviation if player.team_assigned else None,
                 'mlb_org': player.mlb_org,
                 'mlevel': player.mlevel,
+                'level': player.level,
                 'role': player.role,
                 'is_injured': player.is_injured,
             }
@@ -638,6 +643,7 @@ class MyAPIController:
                 'team_assigned': player.team_assigned.abbreviation if player.team_assigned else None,
                 'mlb_org': player.mlb_org,
                 'mlevel': player.mlevel,
+                'level': player.level,
                 'role': player.role,
                 'is_injured': player.is_injured,
             }
@@ -1002,7 +1008,7 @@ class MyAPIController:
                 result[slot] = {
                     'name': p.name, 'first_name': p.first_name, 'last_name': p.last_name,
                     'positions': p.positions, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-                    'raw_age': p.raw_age, 'mlevel': p.mlevel, 'role': p.role, 'is_injured': p.is_injured,
+                    'raw_age': p.raw_age, 'mlevel': p.mlevel, 'level': p.level, 'role': p.role, 'is_injured': p.is_injured,
                     'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
                     'fan_total': hit_totals.get(p.pk) or pitch_totals.get(p.pk),
                     'mlb_org': p.mlb_org,
