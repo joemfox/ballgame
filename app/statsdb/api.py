@@ -466,7 +466,7 @@ class MyAPIController:
             'positions': p.positions,
             'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
             'raw_age': p.raw_age, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-            'fan_total': fan_total, 'mlevel': p.mlevel, 'level': p.level, 'role': p.role, 'mlb_org': p.mlb_org,
+            'fan_total': fan_total, 'mlevel': p.mlevel, 'level': p.level, 'role': p.role, 'mlb_org': p.mlb_org, 'is_injured': p.is_injured,
         }
     
     @api.get("/player/{playerid}/season/{year}/hit", response=SeasonBattingStatLineSchema)

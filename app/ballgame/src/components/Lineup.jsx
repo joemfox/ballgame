@@ -51,7 +51,8 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
                     <span className="flex items-start gap-1 min-w-0">
                         <Link to={`/player/${playerInfo.fg_id}`} className="font-light text-sm text-left truncate block min-w-0 hover:underline">{playerInfo.name}</Link>
                         {playerInfo.level && playerInfo.level !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{playerInfo.level}</span>}
-                        {playerInfo.level === 'MLB' && playerInfo.role && <span className="text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold leading-none shrink-0">{playerInfo.role}</span>}
+                        {playerInfo.is_injured && <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 font-semibold leading-none shrink-0">{/IL/i.test(playerInfo.role) ? playerInfo.role : 'IL'}</span>}
+                        {!playerInfo.is_injured && playerInfo.level === 'MLB' && playerInfo.role && <span className="text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold leading-none shrink-0">{playerInfo.role}</span>}
                         {!playerInfo.level && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">FA</span>}
                     </span>
                 ) : (
