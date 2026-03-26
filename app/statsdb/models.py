@@ -938,6 +938,49 @@ class RosterSnapshot(BaseModel):
         return f'{self.date} - {self.player.name} ({self.team.abbreviation})'
 
 
+class LineupSnapshot(models.Model):
+    """Records lineup slot assignments for a team on a given date, taken at roster lock."""
+    date = models.DateField(null=False)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    lineup_C = models.CharField(max_length=50, null=True, blank=True)
+    lineup_1B = models.CharField(max_length=50, null=True, blank=True)
+    lineup_2B = models.CharField(max_length=50, null=True, blank=True)
+    lineup_SS = models.CharField(max_length=50, null=True, blank=True)
+    lineup_3B = models.CharField(max_length=50, null=True, blank=True)
+    lineup_OF1 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_OF2 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_OF3 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_OF4 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_OF5 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_DH = models.CharField(max_length=50, null=True, blank=True)
+    lineup_UTIL = models.CharField(max_length=50, null=True, blank=True)
+    lineup_SP1 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_SP2 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_SP3 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_SP4 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_SP5 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_RP1 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_RP2 = models.CharField(max_length=50, null=True, blank=True)
+    lineup_RP3 = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('date', 'team')
+
+    def __str__(self):
+        return f'{self.date} - {self.team.abbreviation} lineup snapshot'
+
+    def slot_map(self):
+        """Returns {slot_name: fg_id} for all non-empty slots."""
+        slots = [
+            'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
+            'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
+            'lineup_DH', 'lineup_UTIL',
+            'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
+            'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
+        ]
+        return {s: getattr(self, s) for s in slots if getattr(self, s)}
+
+
 class DailySchedule(models.Model):
     """Stores the first game time for each date, used as the roster lock time."""
     date = models.DateField(unique=True)

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useDrop, useDrag } from 'react-dnd'
 import { ItemTypes } from '@/App'
 import { Button } from "@/components/ui/button"
-import { Minus } from 'lucide-react'
+import { Minus, Lock, LockOpen } from 'lucide-react'
 
 const DB_POSITIONS = {
     lineup_C: "C",
@@ -178,12 +178,19 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
     const [serverLineup, setServerLineup] = useState({})
     const [displayLineup, setDisplayLineup] = useState({})
     const [teamInfo, setTeamInfo] = useState(null)
+    const [lockInfo, setLockInfo] = useState(null)
 
     const refreshLineup = useCallback(() => {
         if (!team) return
         axios.get('/api/lineup/full', { params: { team } })
             .then(res => setServerLineup(res.data))
     }, [team])
+
+    useEffect(() => {
+        axios.get('/api/schedule/lock_time')
+            .then(res => setLockInfo(res.data))
+            .catch(() => { })
+    }, [])
 
     useEffect(() => {
         if (!team) return
@@ -226,8 +233,27 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
             .catch(err => console.error(err))
     }
 
+    function formatLockTime(isoString) {
+        const d = new Date(isoString)
+        return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
+    }
+
     return (
         <div className="p-1">
+            {lockInfo && (
+                lockInfo.is_locked
+                    ? <div className="flex flex-col gap-0.5 px-1 mb-1">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Lock className="w-3 h-3 shrink-0" />Lineup locked
+                        </span>
+                        <span className="text-xs text-muted-foreground pl-4">Changes apply to tomorrow</span>
+                      </div>
+                    : lockInfo.roster_lock_time
+                        ? <p className="flex items-center gap-1 text-xs text-muted-foreground px-1 mb-1">
+                            <LockOpen className="w-3 h-3 shrink-0" />Locks at {formatLockTime(lockInfo.roster_lock_time)}
+                          </p>
+                        : null
+            )}
             {teamInfo && (
                 <p className="text-sm font-semibold mb-2 px-1">{teamInfo.city} {teamInfo.nickname}</p>
             )}

@@ -12,7 +12,7 @@ from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, Draft, DraftPick, Transaction, DailySchedule
+from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, LineupSnapshot, Draft, DraftPick, Transaction, DailySchedule
 from ninja import NinjaAPI, Schema, ModelSchema, FilterSchema, Query
 from ninja_extra import (api_controller, NinjaExtraAPI)
 from ninja.errors import ValidationError as NinjaValidationError
@@ -366,7 +366,22 @@ class DraftStartIn(Schema):
 
 
 def _lineup_for_date(team_obj, date):
-    lineup = get_object_or_404(Lineup, lineup_team=team_obj)
+    snapshot = LineupSnapshot.objects.filter(date=date, team=team_obj).first()
+    if snapshot:
+        slot_map = snapshot.slot_map()
+        players_by_fg_id = {
+            p.fg_id: p
+            for p in Player.objects.filter(fg_id__in=slot_map.values())
+        }
+
+        def get_slot_player(slot):
+            fg_id = slot_map.get(slot)
+            return players_by_fg_id.get(fg_id) if fg_id else None
+    else:
+        lineup = get_object_or_404(Lineup, lineup_team=team_obj)
+
+        def get_slot_player(slot):
+            return getattr(lineup, slot)
 
     BAT_FIELDS = [
         'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
@@ -394,7 +409,7 @@ def _lineup_for_date(team_obj, date):
     def build_rows(slots, model, fields):
         rows = []
         for slot in slots:
-            player = getattr(lineup, slot)
+            player = get_slot_player(slot)
             if not player:
                 continue
             base = {
