@@ -198,7 +198,7 @@ class Command(BaseCommand):
             statline.cs = len([play for play in running_plays if play['details']['eventType'] is not None and 'caught_stealing' in play['details']['eventType'] and 'pickoff' not in play['details']['eventType']])
             statline.outfield_assists = len([play for play in fielding_plays if play['credit'] == 'f_assist_of'])
             statline.e = len([play for play in fielding_plays if 'error' in play['credit']])
-            statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in play['result']['description']])
+            statline.k_looking = len([play for play in batting_plays if 'called out on strikes' in (play['result'].get('description') or '')])
             
             statline.lob = batter["lob"]
             statline.sombrero = int(statline.h) == 0 and int(statline.k) >= 4
