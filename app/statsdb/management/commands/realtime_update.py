@@ -77,7 +77,7 @@ class Command(BaseCommand):
     
     def count_rl2o(self,play):
         if play['result']['isOut'] and play['count']['outs'] == 3:
-            rsp = [r for r in play['runners'] if r['movement']['originBase'] in ['2B','3B'] and r['movement']['end'] not in ['score'] and r['details']['eventType'] not in ['wild_pitch','passed_ball']]
+            rsp = [r for r in play['runners'] if r['movement']['originBase'] in ['2B','3B'] and r['movement']['end'] not in ['score'] and r['details'].get('eventType') not in ['wild_pitch','passed_ball']]
             return len(rsp)
         else: return 0
 
