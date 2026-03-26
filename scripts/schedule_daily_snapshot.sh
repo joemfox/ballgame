@@ -18,5 +18,5 @@ fi
 # Convert UTC ISO string to local time for `at`
 AT_TIME=$(date -d "$LOCK_TIME" '+%H:%M %Y-%m-%d')
 
-echo "docker compose exec django python manage.py snapshot_roster $DATE" | at "$AT_TIME"
+echo "cd /opt/ballgame && docker compose exec -T django python manage.py snapshot_roster $DATE" | at "$AT_TIME"
 echo "$(date): Scheduled snapshot_roster for $DATE at $AT_TIME (local) / $LOCK_TIME (UTC)"
