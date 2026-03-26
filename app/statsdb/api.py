@@ -504,7 +504,7 @@ class MyAPIController:
             'FAN_lob', 'FAN_po', 'FAN_rl2o', 'FAN_rbi', 'FAN_k_looking', 'FAN_k', 'FAN_sb', 'FAN_total',
         ]
         stat_sq = SeasonBattingStatLine.objects.filter(player=OuterRef('pk'), year=year)
-        queryset = Player.objects.exclude(position='P').select_related('team_assigned').annotate(
+        queryset = Player.objects.exclude(position='P').exclude(mlbam_id__isnull=True).exclude(mlbam_id='').select_related('team_assigned').annotate(
             FAN_total=Subquery(stat_sq.values('FAN_total')[:1], output_field=FloatField()),
         )
         # Apply filters on Player fields
@@ -591,7 +591,7 @@ class MyAPIController:
             'FAN_perfect_game', 'FAN_no_hitter', 'FAN_relief_loss', 'FAN_total',
         ]
         stat_sq = SeasonPitchingStatLine.objects.filter(player=OuterRef('pk'), year=year)
-        queryset = Player.objects.filter(position='P').select_related('team_assigned').annotate(
+        queryset = Player.objects.filter(position='P').exclude(mlbam_id__isnull=True).exclude(mlbam_id='').select_related('team_assigned').annotate(
             FAN_total=Subquery(stat_sq.values('FAN_total')[:1], output_field=FloatField()),
         )
         if filters.search:

@@ -6,4 +6,5 @@ docker compose exec django python manage.py realtime_update $DATE overwrite --wo
 docker compose exec django python manage.py aggregate_team_points $DATE
 docker compose exec django python manage.py aggregate_points 2026
 docker compose exec django python manage.py download_fg_rosters
+docker compose exec django python manage.py load_rosters
 docker compose exec django python manage.py update_status_from_fg_rosters
