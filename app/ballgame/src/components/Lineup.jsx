@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useDrop, useDrag } from 'react-dnd'
 import { ItemTypes } from '@/App'
 import { Button } from "@/components/ui/button"
-import { Minus, Lock, LockOpen } from 'lucide-react'
+import { Minus, Lock, Unlock } from 'lucide-react'
 
 const DB_POSITIONS = {
     lineup_C: "C",
@@ -250,7 +250,7 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
                       </div>
                     : lockInfo.roster_lock_time
                         ? <p className="flex items-center gap-1 text-xs text-muted-foreground px-1 mb-1">
-                            <LockOpen className="w-3 h-3 shrink-0" />Locks at {formatLockTime(lockInfo.roster_lock_time)}
+                            <Unlock className="w-3 h-3 shrink-0" />Locks at {formatLockTime(lockInfo.roster_lock_time)}
                           </p>
                         : null
             )}
