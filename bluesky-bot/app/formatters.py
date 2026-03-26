@@ -53,7 +53,7 @@ def format_golden_sombrero(
     org = f" ({game.mlb_org})" if game.mlb_org else ""
     return (
         f"{emoji} GOLDEN SOMBRERO\n"
-        f"{game.player_name}{org} has achieved the season's "
+        f"{game.player_name}{org} has logged the season's "
         f"{_ordinal(season_count)} golden sombrero "
         f"and his {_ordinal(player_season_count)} in {season}."
     )
