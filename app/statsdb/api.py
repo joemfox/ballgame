@@ -52,6 +52,7 @@ class PlayerSchema(Schema):
     fan_total: float | None = None
     mlevel: str | None = None
     role: str | None = None
+    mlb_org: str | None = None
 
     
 class PaginatedPlayerSchema(Schema):
@@ -461,7 +462,7 @@ class MyAPIController:
             'positions': p.positions,
             'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
             'raw_age': p.raw_age, 'mlbam_id': p.mlbam_id, 'fg_id': p.fg_id,
-            'fan_total': fan_total, 'mlevel': p.mlevel, 'role': p.role,
+            'fan_total': fan_total, 'mlevel': p.mlevel, 'role': p.role, 'mlb_org': p.mlb_org,
         }
     
     @api.get("/player/{playerid}/season/{year}/hit", response=SeasonBattingStatLineSchema)
@@ -1004,6 +1005,7 @@ class MyAPIController:
                     'raw_age': p.raw_age, 'mlevel': p.mlevel, 'role': p.role, 'is_injured': p.is_injured,
                     'team_assigned': {'abbreviation': p.team_assigned.abbreviation} if p.team_assigned else None,
                     'fan_total': hit_totals.get(p.pk) or pitch_totals.get(p.pk),
+                    'mlb_org': p.mlb_org,
                 }
         return result
 

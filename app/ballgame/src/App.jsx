@@ -143,8 +143,7 @@ function App() {
       console.log(err);
     });
   };
-  const defaultLayout = [20, 80]
-  const [isCollapsed, setIsCollapsed] = useState(false)
+const [isCollapsed, setIsCollapsed] = useState(false)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -266,15 +265,12 @@ function App() {
           <main className="pl-4 pr-4 border">
             <ResizablePanelGroup
               direction="horizontal"
-              onLayout={(sizes) => {
-                cookies.set(`react-resizable-panels:layout`, `${JSON.stringify(sizes)}`)
-              }}
               className="h-full max-h-[100vh] items-stretch"
             >
               <ResizablePanel
-                defaultSize={defaultLayout[0]}
+                defaultSize={25}
                 minSize={15}
-                maxSize={25}
+                maxSize={40}
                 className={`border-r-2  pt-4 ${cn(isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out")}`}
               >
                 <ScrollArea className="h-[calc(100vh-80px)]">
@@ -282,7 +278,7 @@ function App() {
                 </ScrollArea>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
+              <ResizablePanel defaultSize={75} minSize={60}>
                 <div className="m-auto  pt-4 w-auto px-4 h-[calc(100vh-80px)] overflow-y-auto">
                   {routes}
                 </div>

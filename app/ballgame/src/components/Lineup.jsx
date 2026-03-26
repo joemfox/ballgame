@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useDrop, useDrag } from 'react-dnd'
 import { ItemTypes } from '@/App'
 import { Button } from "@/components/ui/button"
+import { Minus } from 'lucide-react'
 
 const DB_POSITIONS = {
     lineup_C: "C",
@@ -43,36 +44,39 @@ const HITTER_POSITIONS = ['C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'OF', '
 
 function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging, onDropPlayer, pendingDrop, onConfirmDrop, onCancelDrop }) {
     return (
-        <div ref={forwardRef} className={`${isDragging ? 'opacity-30' : ''} rounded-md border p-1 pl-2 m-1 flex flex-row items-center w-full gap-1`}>
+        <div ref={forwardRef} className={`${isDragging ? 'opacity-30' : ''} rounded-md border p-1 pl-2 mx-1 my-0.5 flex flex-row items-center gap-1`}>
             <div className="w-8 shrink-0 text-sm text-center font-bold border-r-2 mr-1 border-border text-muted-foreground">{position}</div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden">
                 {playerInfo.fg_id ? (
-                    <span className="flex items-start gap-1">
-                        <Link to={`/player/${playerInfo.fg_id}`} className="font-light text-sm text-left truncate block hover:underline">{playerInfo.name}</Link>
+                    <span className="flex items-start gap-1 min-w-0">
+                        <Link to={`/player/${playerInfo.fg_id}`} className="font-light text-sm text-left truncate block min-w-0 hover:underline">{playerInfo.name}</Link>
                         {playerInfo.role && playerInfo.role !== 'MLB' && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">{playerInfo.role}</span>}
                         {!playerInfo.role && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold leading-none shrink-0">FA</span>}
                     </span>
                 ) : (
                     <p className="font-light text-sm text-left truncate text-muted-foreground">—</p>
                 )}
-                {playerInfo.name && playerInfo.positions?.length > 0 && (
-                    <p className="text-xs text-muted-foreground truncate">{playerInfo.positions.join(', ')}</p>
+                {playerInfo.name && (playerInfo.positions?.length > 0 || playerInfo.mlb_org) && (
+                    <p className="text-xs text-muted-foreground truncate text-left">
+                        {playerInfo.mlb_org}
+                        {playerInfo.mlb_org && playerInfo.positions?.length > 0 && <span className="mx-1">|</span>}
+                        {playerInfo.positions?.join(', ')}
+                    </p>
                 )}
             </div>
             {playerInfo.fan_total != null && (
                 <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{Number(playerInfo.fan_total).toFixed(1)}</span>
             )}
             {playerInfo.name && onDropPlayer && !pendingDrop && (
-                <Button variant="ghost" size="sm" className="shrink-0 text-red-500 hover:text-red-700 h-6 px-1 text-xs"
-                    onClick={() => onDropPlayer()}>Drop</Button>
+                <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground h-6 w-6 p-0 border border-border bg-muted/50 font-bold"
+                    onClick={() => onDropPlayer()}><Minus className="w-3.5 h-3.5 stroke-[2.5]" /></Button>
             )}
             {pendingDrop && (
                 <div className="shrink-0 flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Drop?</span>
                     <Button variant="ghost" size="sm" className="h-6 px-1 text-xs text-red-600 hover:text-red-800"
-                        onClick={onConfirmDrop}>Yes</Button>
+                        onClick={onConfirmDrop}>Drop</Button>
                     <Button variant="ghost" size="sm" className="h-6 px-1 text-xs"
-                        onClick={onCancelDrop}>No</Button>
+                        onClick={onCancelDrop}>Cancel</Button>
                 </div>
             )}
         </div>

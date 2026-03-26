@@ -94,18 +94,6 @@ export const FAN_columns_hit = [
         }
     },
     mlbOrgColumn,
-    {
-        accessorKey: 'team_assigned',
-        header: 'team',
-        id: 'team_assigned',
-        meta: { pinned: true, width: 60 },
-        cell: ({ row }) => {
-            const val = row.getValue('team_assigned')
-            return val
-                ? <Link to={`/team/${val}`} className="text-left text-muted-foreground hover:underline">{val}</Link>
-                : <div className="text-left text-muted-foreground"></div>
-        }
-    },
     fanTotalColumn_hit,
     {
         accessorKey:"FAN_h",
@@ -235,13 +223,6 @@ export const FAN_columns_pitch = [
         }
     },
     mlbOrgColumn,
-    {
-        accessorKey: 'team_assigned',
-        header: 'team',
-        id: 'team_assigned',
-        meta: { pinned: true, width: 60 },
-        cell: ({ row }) => <div className="text-left text-muted-foreground">{row.getValue('team_assigned') ?? ''}</div>
-    },
     fanTotalColumn_pitch,
     {
         accessorKey:"FAN_ip",
@@ -368,18 +349,6 @@ const namePositionColumns = [
         }
     },
     mlbOrgColumn,
-    {
-        accessorKey: 'team_assigned',
-        header: 'team',
-        id: 'team_assigned',
-        meta: { pinned: true, width: 60 },
-        cell: ({ row }) => {
-            const val = row.getValue('team_assigned')
-            return val
-                ? <Link to={`/team/${val}`} className="text-left text-muted-foreground hover:underline">{val}</Link>
-                : <div className="text-left text-muted-foreground"></div>
-        }
-    },
 ]
 
 const rawFanTotal = {
@@ -437,7 +406,7 @@ export const RAW_columns_pitch = [
 ]
 
 // Columns that should always be visible regardless of viewport
-const ALWAYS_SHOW = new Set(['name', 'positions', 'FAN_total', 'actions', 'team_assigned', 'mlb_org'])
+const ALWAYS_SHOW = new Set(['name', 'positions', 'FAN_total', 'actions', 'mlb_org'])
 const hideStats = cols => cols.map(col =>
     ALWAYS_SHOW.has(col.accessorKey) || ALWAYS_SHOW.has(col.id)
         ? col

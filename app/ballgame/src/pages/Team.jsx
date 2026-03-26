@@ -376,7 +376,7 @@ const GAME_TYPE_COL = {
   },
 }
 
-function DayLineupTable({ data, scoreType }) {
+function DayLineupTable({ data, date, scoreType }) {
   if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>
 
   const hitCols = [SLOT_COL, GAME_TYPE_COL, ...insertAfterFanTotal(columnData[`${scoreType}_columns_hit`], HITTER_SUMMARY_COL)]
@@ -389,8 +389,9 @@ function DayLineupTable({ data, scoreType }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-end">
-        <span className="text-sm font-semibold">
+      <div className="flex items-center justify-between">
+        {date && <span className="text-xs text-muted-foreground">{date}</span>}
+        <span className="text-sm font-semibold ml-auto">
           <span className="text-muted-foreground font-normal">Team total: </span>
           <span className="text-orange-800 dark:text-orange-300">{dayTotal.toFixed(1)} FAN pts</span>
         </span>
@@ -418,12 +419,7 @@ function YesterdayTable({ team, scoreType }) {
       .catch(() => setData({ hitters: [], pitchers: [], date: '' }))
   }, [team])
 
-  return (
-    <div className="space-y-6">
-      {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
-      <DayLineupTable data={data} scoreType={scoreType} />
-    </div>
-  )
+  return <DayLineupTable data={data} date={data?.date} scoreType={scoreType} />
 }
 
 function TodayTable({ team, scoreType }) {
@@ -438,12 +434,7 @@ function TodayTable({ team, scoreType }) {
       .catch(() => setData({ hitters: [], pitchers: [], date: '' }))
   }, [team])
 
-  return (
-    <div className="space-y-6">
-      {data?.date && <span className="text-xs text-muted-foreground">{data.date}</span>}
-      <DayLineupTable data={data} scoreType={scoreType} />
-    </div>
-  )
+  return <DayLineupTable data={data} date={data?.date} scoreType={scoreType} />
 }
 
 function SombreroTable({ team, season }) {

@@ -54,6 +54,7 @@ export default function DataTable({
     const [sumTotal, setSumTotal] = useState(null)
     const [isScrolled, setIsScrolled] = useState(false)
     const [globalRanges, setGlobalRanges] = useState({})
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640)
     const tableWrapperRef = useRef(null)
 
     const baseColumns = columnData[`${scoreType}_columns_${type}`]
@@ -89,14 +90,15 @@ export default function DataTable({
         const offsets = {}
         let left = 0
         for (const col of columns) {
-            if (col.meta?.pinned) {
+            const effectivePin = col.meta?.pinned && (!isMobile || (col.id ?? col.accessorKey) === 'name')
+            if (effectivePin) {
                 const id = col.id ?? col.accessorKey
                 offsets[id] = left
                 left += col.meta.width ?? 0
             }
         }
         return offsets
-    }, [columns])
+    }, [columns, isMobile])
 
     const lastPinnedId = useMemo(() => {
         const keys = Object.keys(pinnedOffsets)
@@ -139,6 +141,13 @@ export default function DataTable({
         const handler = () => setIsScrolled(el.scrollLeft > 0)
         el.addEventListener('scroll', handler, { passive: true })
         return () => el.removeEventListener('scroll', handler)
+    }, [])
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 639px)')
+        const handler = (e) => setIsMobile(e.matches)
+        mq.addEventListener('change', handler)
+        return () => mq.removeEventListener('change', handler)
     }, [])
 
     const defaultSort = {desc: true, id: 'FAN_total'}
@@ -321,10 +330,10 @@ export default function DataTable({
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     const meta = header.column.columnDef.meta
-                                    const pinned = meta?.pinned
                                     const colId = header.column.id
+                                    const effectivelyPinned = meta?.pinned && (!isMobile || colId === 'name')
                                     const isLastPinned = colId === lastPinnedId
-                                    const stickyStyle = pinned ? {
+                                    const stickyStyle = effectivelyPinned ? {
                                         position: 'sticky',
                                         left: pinnedOffsets[colId],
                                         zIndex: 20,
@@ -337,7 +346,7 @@ export default function DataTable({
                                         } : {})
                                     } : {}
                                     const highlightClass = meta?.highlight ? 'bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300' : ''
-                                    const headerStyle = pinned ? stickyStyle : (meta?.highlight ? {} : { backgroundColor: 'hsl(var(--background))' })
+                                    const headerStyle = effectivelyPinned ? stickyStyle : (meta?.highlight ? {} : { backgroundColor: 'hsl(var(--background))' })
                                     return (
                                         <TableHead key={header.id} className={`${meta?.className ?? ''} ${highlightClass} pinned-cols`} style={headerStyle}>
                                             {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -358,14 +367,14 @@ export default function DataTable({
                             >
                                 {row.getVisibleCells().map((cell) => {
                                     const meta = cell.column.columnDef.meta
-                                    const pinned = meta?.pinned
                                     const colId = cell.column.id
+                                    const effectivelyPinned = meta?.pinned && (!isMobile || colId === 'name')
                                     const isLastPinned = colId === lastPinnedId
                                     const highlightClass = meta?.highlight ? 'bg-orange-50 dark:bg-orange-950 text-orange-900 dark:text-orange-200' : ''
 
                                     // Data-driven shading for non-pinned, non-highlight numeric cells
                                     let shadeStyle = {}
-                                    if (!pinned && !meta?.highlight) {
+                                    if (!effectivelyPinned && !meta?.highlight) {
                                         const key = cell.column.columnDef.accessorKey
                                         const range = globalRanges[key]
                                         if (range) {
@@ -375,7 +384,7 @@ export default function DataTable({
                                         }
                                     }
 
-                                    const stickyStyle = pinned ? {
+                                    const stickyStyle = effectivelyPinned ? {
                                         position: 'sticky',
                                         left: pinnedOffsets[colId],
                                         zIndex: 10,
