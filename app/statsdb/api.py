@@ -383,6 +383,11 @@ def _lineup_for_date(team_obj, date):
         def get_slot_player(slot):
             return getattr(lineup, slot)
 
+    # Build a map of player_id -> owning team abbreviation for this date from RosterSnapshot.
+    # Falls back to team_obj if no snapshot exists for a player.
+    roster_snaps = RosterSnapshot.objects.filter(date=date, team=team_obj).select_related('player', 'team')
+    snapped_player_ids = {rs.player_id: rs.team.abbreviation for rs in roster_snaps}
+
     BAT_FIELDS = [
         'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
         'lob', 'sb', 'cs', 'e', 'k_looking', 'rl2o', 'cycle', 'gidp', 'po', 'outfield_assists',
@@ -412,18 +417,26 @@ def _lineup_for_date(team_obj, date):
             player = get_slot_player(slot)
             if not player:
                 continue
+            # Only include this player if they were owned by team_obj on this date.
+            # If no RosterSnapshot exists yet (e.g. today before lock), fall back to current assignment.
+            if snapped_player_ids:
+                if player.id not in snapped_player_ids:
+                    continue
+                owner_abbr = snapped_player_ids[player.id]
+            else:
+                owner_abbr = team_obj.abbreviation
             base = {
                 'player_name': player.name,
                 'fg_id': player.fg_id,
                 'slot': slot.replace('lineup_', ''),
                 'positions': list(player.positions) if player.positions else [],
-                'team_assigned': team_obj.abbreviation,
+                'team_assigned': owner_abbr,
                 'mlevel': player.mlevel,
                 'level': player.level,
                 'role': player.role,
                 'is_injured': player.is_injured,
             }
-            all_stats = list(model.objects.filter(player=player, date=date))
+            all_stats = list(model.objects.filter(player=player, date=date, fantasy_team=team_obj))
             if all_stats:
                 for stat in all_stats:
                     row = dict(base)
