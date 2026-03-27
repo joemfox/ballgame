@@ -2,7 +2,7 @@ import json
 from django import forms
 from django.contrib import admin
 from django.utils.html import format_html, format_html_join
-from .models import Owner, Team, Player, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, Draft, DraftPick
+from .models import Owner, Team, Player, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, Draft, DraftPick, RosterSnapshot
 
 
 class DraftOrderWidget(forms.Widget):
@@ -133,3 +133,13 @@ class DraftAdmin(admin.ModelAdmin):
 
 admin.site.register(Draft, DraftAdmin)
 admin.site.register(DraftPick)
+
+
+class RosterSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('date', 'player', 'team')
+    list_filter = ('date', 'team')
+    search_fields = ('player__name',)
+    raw_id_fields = ('player',)
+    date_hierarchy = 'date'
+
+admin.site.register(RosterSnapshot, RosterSnapshotAdmin)
