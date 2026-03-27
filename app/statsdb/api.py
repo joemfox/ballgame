@@ -384,8 +384,9 @@ def _lineup_for_date(team_obj, date):
             return getattr(lineup, slot)
 
     # Build a map of player_id -> owning team abbreviation for this date from RosterSnapshot.
-    roster_snaps = RosterSnapshot.objects.filter(date=date, team=team_obj).select_related('player', 'team')
-    snapped_player_ids = {rs.player_id: rs.team.abbreviation for rs in roster_snaps}
+    snapped_player_ids = set(
+        RosterSnapshot.objects.filter(date=date, team=team_obj).values_list('player_id', flat=True)
+    )
     has_snapshots = bool(snapped_player_ids)
 
     BAT_FIELDS = [
@@ -422,7 +423,7 @@ def _lineup_for_date(team_obj, date):
             if has_snapshots:
                 if player.id not in snapped_player_ids:
                     continue
-                owner_abbr = snapped_player_ids[player.id]
+                owner_abbr = team_obj.abbreviation
             else:
                 owner_abbr = team_obj.abbreviation
             base = {
