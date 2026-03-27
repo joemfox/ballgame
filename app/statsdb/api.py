@@ -384,9 +384,9 @@ def _lineup_for_date(team_obj, date):
             return getattr(lineup, slot)
 
     # Build a map of player_id -> owning team abbreviation for this date from RosterSnapshot.
-    # Falls back to team_obj if no snapshot exists for a player.
     roster_snaps = RosterSnapshot.objects.filter(date=date, team=team_obj).select_related('player', 'team')
     snapped_player_ids = {rs.player_id: rs.team.abbreviation for rs in roster_snaps}
+    has_snapshots = bool(snapped_player_ids)
 
     BAT_FIELDS = [
         'ab', 'r', 'h', 'outs', 'doubles', 'triples', 'hr', 'rbi', 'bb', 'k',
@@ -417,9 +417,9 @@ def _lineup_for_date(team_obj, date):
             player = get_slot_player(slot)
             if not player:
                 continue
-            # Only include this player if they were owned by team_obj on this date.
-            # If no RosterSnapshot exists yet (e.g. today before lock), fall back to current assignment.
-            if snapped_player_ids:
+            # If snapshots exist for this date, use them as the authoritative ownership filter.
+            # If no snapshots exist (e.g. today before roster lock), fall back to current assignment.
+            if has_snapshots:
                 if player.id not in snapped_player_ids:
                     continue
                 owner_abbr = snapped_player_ids[player.id]
@@ -436,7 +436,10 @@ def _lineup_for_date(team_obj, date):
                 'role': player.role,
                 'is_injured': player.is_injured,
             }
-            all_stats = list(model.objects.filter(player=player, date=date, fantasy_team=team_obj))
+            stat_filter = {'player': player, 'date': date}
+            if has_snapshots:
+                stat_filter['fantasy_team'] = team_obj
+            all_stats = list(model.objects.filter(**stat_filter))
             if all_stats:
                 for stat in all_stats:
                     row = dict(base)
