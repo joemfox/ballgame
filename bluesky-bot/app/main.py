@@ -34,10 +34,18 @@ def log(msg: str) -> None:
 def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
     log(f"run_live date={game_date} season={season}{' DRY-RUN' if dry_run else ''}")
 
-    # Near-sombrero watch (in-progress games)
+    # Fetch schedule once; reused for near-sombrero filtering and game-state checks.
+    r_schedule = db.fetch_r_schedule(game_date)
+    done_ids = db.final_game_ids(r_schedule)
+    log(f"schedule: {len(r_schedule)} R-type games, {len(done_ids)} final per API")
+
+    # Near-sombrero watch (in-progress games only)
     near = db.get_near_sombreros(game_date)
     log(f"near-sombreros found: {len(near)}")
     for game in near:
+        if game.game_id in done_ids:
+            log(f"  skip near_sombrero: {game.player_name} game={game.game_id} (game complete per schedule API)")
+            continue
         if state.already_posted(season, "near_sombrero", game.game_id, game.player_id):
             log(f"  skip near_sombrero already posted: {game.player_name} game={game.game_id}")
             continue
@@ -85,8 +93,8 @@ def run_live(client, game_date: date, season: int, dry_run: bool) -> None:
             log(f"  posted and marked: {game.event_type} {game.player_name}")
 
     any_games     = db.has_any_games(game_date)
-    active_games  = db.has_active_games(game_date)
-    unstarted     = db.has_unstarted_games(game_date)
+    active_games  = db.has_active_games(game_date, r_schedule)
+    unstarted     = db.has_unstarted_games(game_date, r_schedule)
     log(f"game state: any={any_games} active={active_games} unstarted={unstarted}")
     if any_games and not active_games and not unstarted:
         log("All games complete — running postgame wrap-up")
@@ -125,7 +133,8 @@ def run_postgame(client, game_date: date, season: int, dry_run: bool) -> None:
             print(alt)
             if not dry_run:
                 img_bytes = images.generate_standings_image(entries, season, game_date)
-                bluesky.post_image(client, text="", image_bytes=img_bytes, alt_text=alt)
+                standings_text = f"Sombrero Cup standings for {game_date.strftime('%B %-d')}"
+                bluesky.post_image(client, text=standings_text, image_bytes=img_bytes, alt_text=alt)
                 state.mark_posted(season, "standings", date_key, "all")
                 log("posted and marked: standings")
         else:

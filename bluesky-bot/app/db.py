@@ -56,14 +56,33 @@ def _parse_statline_id(statline_id: str, player_mlbam_id: str) -> tuple[str, str
     return game_id, str(player_mlbam_id)
 
 
-def has_unstarted_games(game_date: date) -> bool:
-    """True if the MLB schedule has regular-season games today that haven't produced any statlines yet."""
+_FINAL_STATUSES = {"Final", "Game Over", "Completed Early"}
+_SKIP_STATUSES   = {"Postponed", "Cancelled", "Suspended"}
+
+
+def fetch_r_schedule(game_date: date) -> list:
+    """Return regular-season schedule entries for the date from the MLB API."""
     import statsapi
     date_str = game_date.strftime("%m/%d/%Y")
+    return [
+        g for g in statsapi.schedule(start_date=date_str, end_date=date_str)
+        if g.get("game_type") == "R"
+    ]
+
+
+def final_game_ids(r_schedule: list) -> set[str]:
+    """Game IDs the schedule API reports as complete."""
+    return {str(g["game_id"]) for g in r_schedule if g.get("status") in _FINAL_STATUSES}
+
+
+def has_unstarted_games(game_date: date, r_schedule: list | None = None) -> bool:
+    """True if the MLB schedule has regular-season games today that haven't produced any statlines yet."""
+    if r_schedule is None:
+        r_schedule = fetch_r_schedule(game_date)
     scheduled = {
         str(g["game_id"])
-        for g in statsapi.schedule(start_date=date_str, end_date=date_str)
-        if g.get("game_type") == "R"
+        for g in r_schedule
+        if g.get("status") not in _SKIP_STATUSES
     }
     if not scheduled:
         return False
@@ -79,8 +98,13 @@ def has_unstarted_games(game_date: date) -> bool:
     return bool(scheduled - started)
 
 
-def has_active_games(game_date: date) -> bool:
-    """True if any regular-season statlines for the date are still in progress."""
+def has_active_games(game_date: date, r_schedule: list | None = None) -> bool:
+    """True if any regular-season games for the date are still in progress.
+
+    Checks the DB first; if the DB shows active statlines, cross-checks with the
+    MLB schedule API to guard against stale game_complete=False rows left by a
+    failed realtime_update run.
+    """
     sql = """
         SELECT 1 FROM statsdb_battingstatline
         WHERE date = %(date)s
@@ -91,7 +115,17 @@ def has_active_games(game_date: date) -> bool:
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, {"date": game_date})
-            return cur.fetchone() is not None
+            if cur.fetchone() is None:
+                return False
+
+    # DB shows active rows — verify against the schedule API so that stale
+    # game_complete=False statlines (e.g. from a game that errored mid-update)
+    # don't permanently block the postgame wrap-up.
+    if r_schedule is None:
+        r_schedule = fetch_r_schedule(game_date)
+    if not r_schedule:
+        return False
+    return not all(g.get("status") in _FINAL_STATUSES for g in r_schedule)
 
 
 def has_any_games(game_date: date) -> bool:

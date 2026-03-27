@@ -6,6 +6,56 @@ from datetime import date
 
 from db import SombreroGame, SombreroStandingsEntry
 
+TEAM_HASHTAGS = {
+    # FanGraphs / ROSTER_TEAM_IDS abbreviations (what load_rosters stores in mlb_org)
+    "ARI": "#Dbacks",
+    "ATL": "#BravesCountry",
+    "BAL": "#Birdland",
+    "BOS": "#DirtyWater",
+    "CHC": "#BeHereForIt",
+    "CHW": "#WhiteSox",
+    "CIN": "#ATOBTTR",
+    "CLE": "#GuardsBall",
+    "COL": "#Rockies",
+    "DET": "#RepDetroit",
+    "HOU": "#ChaseTheFight",
+    "KCR": "#FountainsUp",
+    "LAA": "#RepTheHalo",
+    "LAD": "#Dodgers",
+    "MIA": "#FightinFish",
+    "MIL": "#ThisIsMyCrew",
+    "MIN": "#MNTwins",
+    "NYM": "#LGM",
+    "NYY": "#RepBX",
+    "OAK": "#Athletics",
+    "PHI": "#RingTheBell",
+    "PIT": "#LetsGoBucs",
+    "SDP": "#ForTheFaithful",
+    "SEA": "#TridentsUp",
+    "SFG": "#SFGiants",
+    "STL": "#STLCards",
+    "TBR": "#RaysUp",
+    "TEX": "#AllForTX",
+    "TOR": "#BlueJays50",
+    "WAS": "#Natitude",
+    "WSN": "#Natitude",
+    # Alternate abbreviations (MLB_URL_TO_ORG_NAME and user-provided list)
+    "ATH": "#Athletics",
+    "AZ":  "#Dbacks",
+    "CWS": "#WhiteSox",
+    "KC":  "#FountainsUp",
+    "SD":  "#ForTheFaithful",
+    "SF":  "#SFGiants",
+    "TB":  "#RaysUp",
+    "WSH": "#Natitude",
+}
+
+
+def _hashtag(mlb_org: str | None) -> str:
+    tag = TEAM_HASHTAGS.get(mlb_org or "")
+    return f" {tag}" if tag else ""
+
+
 CELEBRATION_EMOJI = [
     "🎉", "🥳", "🎊", "🎺", "🪗", "🎸", "🎷", "🏆", "🎖️", "🥂",
     "🍾", "🎆", "🎇", "✨", "🌟", "💫", "🎠", "🎡", "🎢", "🪅",
@@ -40,6 +90,7 @@ def format_near_sombrero(game: SombreroGame) -> str:
         f"👀 SOMBRERO WATCH 👀\n"
         f"{game.player_name}{org} is {line} with 3 strikeouts"
         f"{_inning_str(game.inning)}."
+        f"{_hashtag(game.mlb_org)}"
     )
 
 
@@ -49,13 +100,15 @@ def format_golden_sombrero(
     season_count: int,
     player_season_count: int,
 ) -> str:
+    VERBS = ["logged", "achieved", "secured", "notched", "garnered", "registered", "recorded", "chalked up", "earned", "claimed", "bagged", "posted", "put up"]
     emoji = random.choice(CELEBRATION_EMOJI)
     org = f" ({game.mlb_org})" if game.mlb_org else ""
     return (
         f"{emoji} GOLDEN SOMBRERO\n"
-        f"{game.player_name}{org} has logged the season's "
+        f"{game.player_name}{org} has {random.choice(VERBS)} the season's "
         f"{_ordinal(season_count)} golden sombrero "
         f"and his {_ordinal(player_season_count)} in {season}."
+        f"\n{_hashtag(game.mlb_org)}"
     )
 
 
@@ -74,6 +127,7 @@ def format_platinum_sombrero(
         f"{_ordinal(season_platinum_count)} platinum sombrero. "
         f"It's the {_ordinal(season_total_count)} sombrero of the season "
         f"and his {_ordinal(player_season_count)} in {season}."
+        f"\n{_hashtag(game.mlb_org)}"
     )
 
 
@@ -88,12 +142,12 @@ def format_ultimate_sombrero(
     opener = random.choice(ULTIMATE_OPENERS)
     return (
         f"{opener}\n"
-        f"{game.player_name}{org} has just struck out {game.k} times "
-        f"without recording a single hit. "
+        f"{game.player_name}{org} has just struck out {game.k} times!"
         f"This is the {_ordinal(all_time_count)} time this has ever happened "
         f"in baseball history and the {_ordinal(player_season_count)} time "
         f"for {game.player_name} in {season}. "
         f"We may never see this again."
+        f"\n{_hashtag(game.mlb_org)}"
     )
 
 
