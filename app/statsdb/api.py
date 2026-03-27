@@ -12,6 +12,7 @@ from django.db.models.fields import Field
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.core.cache import cache
 from .models import Player, Team, Lineup, BattingStatLine, PitchingStatLine, SeasonBattingStatLine, SeasonPitchingStatLine, TeamBattingStatLine, TeamPitchingStatLine, RosterSnapshot, LineupSnapshot, Draft, DraftPick, Transaction, DailySchedule
 from ninja import NinjaAPI, Schema, ModelSchema, FilterSchema, Query
 from ninja_extra import (api_controller, NinjaExtraAPI)
@@ -413,37 +414,45 @@ def _lineup_for_date(team_obj, date):
         return result
 
     def build_rows(slots, model, fields):
-        rows = []
+        # Collect players for these slots, respecting snapshot ownership filter.
+        slot_players = []
         for slot in slots:
             player = get_slot_player(slot)
             if not player:
                 continue
-            # If snapshots exist for this date, use them as the authoritative ownership filter.
-            # If no snapshots exist (e.g. today before roster lock), fall back to current assignment.
-            if has_snapshots:
-                if player.id not in snapped_player_ids:
-                    continue
-                owner_abbr = team_obj.abbreviation
-            else:
-                owner_abbr = team_obj.abbreviation
+            if has_snapshots and player.id not in snapped_player_ids:
+                continue
+            slot_players.append((slot, player))
+
+        if not slot_players:
+            return []
+
+        # Batch-load all stats for these players in one query.
+        player_ids = [p.id for _, p in slot_players]
+        stat_filter = {'player_id__in': player_ids, 'date': date}
+        if has_snapshots:
+            stat_filter['fantasy_team'] = team_obj
+        stats_by_player = {}
+        for stat in model.objects.filter(**stat_filter):
+            stats_by_player.setdefault(stat.player_id, []).append(stat)
+
+        rows = []
+        for slot, player in slot_players:
             base = {
                 'player_name': player.name,
                 'fg_id': player.fg_id,
                 'slot': slot.replace('lineup_', ''),
                 'positions': list(player.positions) if player.positions else [],
-                'team_assigned': owner_abbr,
+                'team_assigned': team_obj.abbreviation,
                 'mlb_org': player.mlb_org,
                 'mlevel': player.mlevel,
                 'level': player.level,
                 'role': player.role,
                 'is_injured': player.is_injured,
             }
-            stat_filter = {'player': player, 'date': date}
-            if has_snapshots:
-                stat_filter['fantasy_team'] = team_obj
-            all_stats = list(model.objects.filter(**stat_filter))
-            if all_stats:
-                for stat in all_stats:
+            player_stats = stats_by_player.get(player.id, [])
+            if player_stats:
+                for stat in player_stats:
                     row = dict(base)
                     row['game_type'] = stat.game_type
                     row.update(serialize(stat, fields))
@@ -859,6 +868,10 @@ class MyAPIController:
 
     @api.get("/standings/{year}", response=List[StandingsEntrySchema])
     def standings(request, year: str):
+        cache_key = f'standings_{year}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         team_names = {t.abbreviation: f"{t.city} {t.nickname}".strip() for t in Team.objects.all()}
         bat = {
             r['team__abbreviation']: float(r['total'] or 0)
@@ -879,6 +892,7 @@ class MyAPIController:
             p = pitch.get(abbr, 0.0)
             result.append({'team': abbr, 'team_name': team_names.get(abbr), 'bat_total': b, 'pitch_total': p, 'total': b + p})
         result.sort(key=lambda x: x['total'], reverse=True)
+        cache.set(cache_key, result, timeout=300)
         return result
 
     @api.get("/roster", response=List[PlayerSchema])
@@ -1008,10 +1022,19 @@ class MyAPIController:
         return {"success": True}
 
     @api.get("/lineup", response=LineupSchema)
-    def lineup(request,team: str):
-        team_obj = get_object_or_404(Team.objects.all(),abbreviation=team)
-        lineup = get_object_or_404(Lineup.objects.all(),lineup_team=team_obj)
-        return lineup
+    def lineup(request, team: str):
+        _lineup_slots = [
+            'lineup_C', 'lineup_1B', 'lineup_2B', 'lineup_SS', 'lineup_3B',
+            'lineup_OF1', 'lineup_OF2', 'lineup_OF3', 'lineup_OF4', 'lineup_OF5',
+            'lineup_DH', 'lineup_UTIL',
+            'lineup_SP1', 'lineup_SP2', 'lineup_SP3', 'lineup_SP4', 'lineup_SP5',
+            'lineup_RP1', 'lineup_RP2', 'lineup_RP3',
+        ]
+        team_obj = get_object_or_404(Team, abbreviation=team)
+        return get_object_or_404(
+            Lineup.objects.select_related(*_lineup_slots),
+            lineup_team=team_obj,
+        )
 
     @api.get("/lineup/full")
     def lineup_full(request, team: str):
