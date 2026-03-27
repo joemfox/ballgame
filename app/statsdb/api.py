@@ -432,6 +432,7 @@ def _lineup_for_date(team_obj, date):
                 'slot': slot.replace('lineup_', ''),
                 'positions': list(player.positions) if player.positions else [],
                 'team_assigned': owner_abbr,
+                'mlb_org': player.mlb_org,
                 'mlevel': player.mlevel,
                 'level': player.level,
                 'role': player.role,
