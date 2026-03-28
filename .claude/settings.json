@@ -8,10 +8,17 @@
       "Read(//tmp/**)",
       "Bash(npm run:*)",
       "Bash(docker build:*)",
-      "Bash(grep -l \"tab\" /home/joe/code/ballgame/app/ballgame/src/components/*.jsx /home/joe/code/ballgame/app/ballgame/src/pages/*.jsx)"
+      "Bash(grep -l \"tab\" /home/joe/code/ballgame/app/ballgame/src/components/*.jsx /home/joe/code/ballgame/app/ballgame/src/pages/*.jsx)",
+      "WebFetch(domain:docs.bsky.app)",
+      "Bash(python3 -c \"from PIL import Image; print\\(''PIL ok''\\)\")",
+      "Bash(python3 -c \"import rembg\")",
+      "Bash(python3 bluesky-bot/test_standings.py)",
+      "Read(//usr/share/fonts/**)",
+      "Read(//mnt/c/Users/**)"
     ],
     "additionalDirectories": [
-      "/tmp"
+      "/tmp",
+      "/tmp/standings_test"
     ]
   }
 }

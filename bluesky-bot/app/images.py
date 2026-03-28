@@ -4,6 +4,8 @@ Fonts are converted from woff to TTF at Docker build time (see Dockerfile).
 Player headshots are fetched from the MLB CDN; the placeholder silhouette
 is detected by hash comparison and treated as absent.
 """
+from __future__ import annotations
+
 import hashlib
 import io
 from datetime import date
@@ -12,6 +14,8 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from rembg import new_session, remove as rembg_remove
+
+from typing import Optional
 
 from db import SombreroStandingsEntry
 
@@ -39,7 +43,9 @@ GOLD       = (170, 120, 0,   255)
 RULE       = (210, 210, 218, 255)
 WATERMARK  = (150, 150, 165, 255)
 
-TOP_N           = 5
+MIN_DISPLAY_ROWS = 5
+MAX_DISPLAY_ROWS = 10
+MAX_RANK_GROUPS  = 5
 
 SCALE           = 2
 WIDTH           = 530  * SCALE
@@ -52,6 +58,8 @@ ROW_H           = 73   * SCALE
 FOOTER_H        = 36   * SCALE
 PORTRAIT_H      = 65   * SCALE
 PORTRAIT_W      = 49   * SCALE
+MINI_PORTRAIT_W = 30   * SCALE
+MINI_PORTRAIT_H = int(PORTRAIT_H * MINI_PORTRAIT_W / PORTRAIT_W)
 
 # Column x-positions
 X_RANK     = H_PAD
@@ -62,10 +70,10 @@ X_COUNT    = WIDTH - H_PAD - 20 * SCALE
 HEADSHOT_URL = "https://securea.mlb.com/mlb/images/players/head_shot/{mlb_id}.jpg"
 
 # Lazily populated: hash of the placeholder image the CDN returns for unknown players
-_placeholder_hash: str | None = None
+_placeholder_hash: Optional[str] = None
 
 
-def _get_placeholder_hash() -> str | None:
+def _get_placeholder_hash() -> Optional[str]:
     """Fetch the placeholder once using a known-absent player ID and cache its hash."""
     global _placeholder_hash
     if _placeholder_hash is None:
@@ -78,7 +86,7 @@ def _get_placeholder_hash() -> str | None:
     return _placeholder_hash
 
 
-def _fetch_headshot(mlb_id: str) -> Image.Image | None:
+def _fetch_headshot(mlb_id: str) -> Optional[Image.Image]:
     cache_path = HEADSHOT_CACHE_DIR / f"{mlb_id}.png"
     if cache_path.exists():
         try:
@@ -102,13 +110,81 @@ def _fetch_headshot(mlb_id: str) -> Image.Image | None:
         return None
 
 
+def _build_display_rows(entries: list[SombreroStandingsEntry]) -> list[dict]:
+    """
+    Groups entries by sombrero_count and returns a list of display row dicts.
+
+    Only rank 1 (first-place) expands beyond MIN_DISPLAY_ROWS rows. All other
+    rank groups share whatever space remains up to the target row count.
+
+    Row dict keys:
+      type      "individual" | "combined" | "empty"
+      rank      int
+      is_tied   bool  (individual and combined only)
+      entry     SombreroStandingsEntry  (individual only)
+      group     list[SombreroStandingsEntry]  (combined only)
+    """
+    # Group consecutive entries with the same sombrero_count
+    groups: list[tuple[int, list[SombreroStandingsEntry]]] = []
+    for entry in entries:
+        if groups and groups[-1][0] == entry.sombrero_count:
+            groups[-1][1].append(entry)
+        else:
+            groups.append((entry.sombrero_count, [entry]))
+
+    rows: list[dict] = []
+    rank = 1
+
+    if not groups:
+        # No entries at all — fall through to padding
+        pass
+    else:
+        # ── Rank 1 group ──────────────────────────────────────────────────────
+        _, rank1_entries = groups[0]
+        is_tied = len(rank1_entries) > 1
+        if len(rank1_entries) <= MAX_DISPLAY_ROWS:
+            for entry in rank1_entries:
+                rows.append({"type": "individual", "rank": rank, "is_tied": is_tied, "entry": entry})
+        else:
+            rows.append({"type": "combined", "rank": rank, "is_tied": is_tied, "group": rank1_entries})
+        rank += len(rank1_entries)
+
+        # Target total rows: rank 1 may expand beyond MIN_DISPLAY_ROWS
+        target = max(MIN_DISPLAY_ROWS, len(rows))
+        remaining = target - len(rows)
+
+        # ── Rank 2+ groups ────────────────────────────────────────────────────
+        rank_groups_shown = 1
+        for _, group_entries in groups[1:]:
+            if remaining <= 0 or rank_groups_shown >= MAX_RANK_GROUPS:
+                break
+            is_tied = len(group_entries) > 1
+            if len(group_entries) <= remaining:
+                for entry in group_entries:
+                    rows.append({"type": "individual", "rank": rank, "is_tied": is_tied, "entry": entry})
+                remaining -= len(group_entries)
+            else:
+                rows.append({"type": "combined", "rank": rank, "is_tied": is_tied, "group": group_entries})
+                remaining -= 1
+            rank += len(group_entries)
+            rank_groups_shown += 1
+
+    # ── Pad to target (at least MIN_DISPLAY_ROWS) ─────────────────────────────
+    target = max(MIN_DISPLAY_ROWS, len(rows))
+    while len(rows) < target:
+        rows.append({"type": "empty", "rank": rank})
+        rank += 1
+
+    return rows
+
+
 def generate_standings_image(
     entries: list[SombreroStandingsEntry],
     season: int,
     as_of: date,
 ) -> bytes:
-    entries  = entries[:TOP_N]
-    n_rows   = TOP_N
+    display_rows = _build_display_rows(entries)
+    n_rows   = len(display_rows)
     rule_y   = HEADER_H + DATE_BOTTOM_PAD
     table_y  = rule_y + TABLE_TOP_PAD
     height   = table_y + ROW_H * n_rows + FOOTER_H
@@ -122,66 +198,83 @@ def generate_standings_image(
 
     font_header    = ImageFont.truetype(FONT_BOLD, 32 * SCALE)
     font_subheader = ImageFont.truetype(FONT_MONO, 15 * SCALE)
+    font_name      = ImageFont.truetype(FONT_MONO, 24 * SCALE)
+    font_count     = ImageFont.truetype(FONT_BOLD, 32 * SCALE)
+    font_rank      = ImageFont.truetype(FONT_MONO, 18 * SCALE)
 
     date_y    = rule_y - 30
     subhead_y = date_y - 34
     title_y   = subhead_y - 76
-    draw.text((WIDTH // 2, title_y),   f"{season} Sombrero Cup",       fill=TEXT,    font=font_header,    anchor="mm")
-    draw.text((WIDTH // 2, subhead_y), "Most games with 4+ Ks",        fill=SUBTEXT, font=font_subheader, anchor="mm")
+    draw.text((WIDTH // 2, title_y),   f"{season} Sombrero Cup",           fill=TEXT,    font=font_header,    anchor="mm")
+    draw.text((WIDTH // 2, subhead_y), "Most games with 4+ Ks",            fill=SUBTEXT, font=font_subheader, anchor="mm")
     draw.text((WIDTH // 2, date_y),    as_of.strftime("as of %B %-d, %Y"), fill=SUBTEXT, font=font_subheader, anchor="mm")
 
     # ── Rows ──────────────────────────────────────────────────────────────────
-    font_name  = ImageFont.truetype(FONT_MONO, 24 * SCALE)
-    font_count = ImageFont.truetype(FONT_BOLD, 32 * SCALE)
-    font_rank  = ImageFont.truetype(FONT_MONO, 18 * SCALE)
+    first_empty_drawn = False
 
-    # Precompute ranks with tie handling
-    ranks = []
-    rank = 1
-    for i, entry in enumerate(entries):
-        if i > 0 and entry.sombrero_count < entries[i - 1].sombrero_count:
-            rank = i + 1
-        ranks.append(rank)
-    tied = {r for r in ranks if ranks.count(r) > 1}
-
-    for i in range(n_rows):
+    for i, row in enumerate(display_rows):
         y  = table_y + i * ROW_H
         cy = y + ROW_H // 2
 
-        # Rule above each row (skip first — already have header rule)
         if i > 0:
             draw.line([(RULE_PAD, y), (WIDTH - RULE_PAD, y)], fill=RULE, width=1)
 
-        if i >= len(entries):
-            # Compute the next sequential rank after all entries
-            next_rank = ranks[-1] + len([r for r in ranks if r == ranks[-1]]) if ranks else i + 1
-            display_rank = next_rank + (i - len(entries))
-            draw.text((X_RANK, cy), f"{display_rank}.", fill=SUBTEXT, font=font_rank, anchor="lm")
-            if i == len(entries):
+        rank = row["rank"]
+
+        if row["type"] == "empty":
+            draw.text((X_RANK, cy), f"{rank}.", fill=SUBTEXT, font=font_rank, anchor="lm")
+            if not first_empty_drawn:
                 draw.text((X_NAME, cy), "Everyone Else", fill=SUBTEXT, font=font_name, anchor="lm")
                 draw.text((X_COUNT, cy), "0", fill=SUBTEXT, font=font_count, anchor="rm")
+                first_empty_drawn = True
             continue
 
-        entry = entries[i]
-        r = ranks[i]
-        rank_label = f"T{r}." if r in tied else f"{r}."
-
-        # Rank
+        is_tied = row["is_tied"]
+        rank_label = f"T{rank}." if is_tied else f"{rank}."
         draw.text((X_RANK, cy), rank_label, fill=SUBTEXT, font=font_rank, anchor="lm")
 
-        # Portrait (blank space reserved if unavailable)
-        portrait = _fetch_headshot(entry.player_id)
-        if portrait:
-            pw, ph = portrait.size
-            portrait_x = X_PORTRAIT
-            portrait_y = cy - ph // 2
-            img.paste(portrait, (portrait_x, portrait_y), mask=portrait)
+        if row["type"] == "individual":
+            entry = row["entry"]
+            portrait = _fetch_headshot(entry.player_id)
+            if portrait:
+                pw, ph = portrait.size
+                img.paste(portrait, (X_PORTRAIT, cy - ph // 2), mask=portrait)
+            draw.text((X_NAME, cy), entry.player_name, fill=TEXT, font=font_name, anchor="lm")
+            draw.text((X_COUNT, cy), str(entry.sombrero_count), fill=GOLD, font=font_count, anchor="rm")
 
-        # Name + org
-        draw.text((X_NAME, cy), entry.player_name, fill=TEXT, font=font_name, anchor="lm")
+        elif row["type"] == "combined":
+            group = row["group"]
+            n = len(group)
+            count_val = group[0].sombrero_count
+            count_str = str(count_val)
+            label = f"{n} players"
 
-        # Count
-        draw.text((X_COUNT, cy), str(entry.sombrero_count), fill=GOLD, font=font_count, anchor="rm")
+            # Measure text widths to compute headshot area
+            count_w = int(font_count.getlength(count_str))
+            label_w = int(font_rank.getlength(label))
+            gap = 8 * SCALE
+            # Headshots fill from X_PORTRAIT up to where the label begins
+            avail = X_COUNT - count_w - gap - label_w - gap - X_PORTRAIT
+            mini_w = min(MINI_PORTRAIT_W, max(2 * SCALE, avail))
+            mini_h = int(PORTRAIT_H * mini_w / PORTRAIT_W)
+            step = 0 if n <= 1 else max(2 * SCALE, (avail - mini_w) // (n - 1))
+
+            # Fetch all portraits upfront
+            portraits = [_fetch_headshot(e.player_id) for e in group]
+
+            # Draw back-to-front so the leftmost headshot is on top
+            for j in range(n - 1, -1, -1):
+                p = portraits[j]
+                if p:
+                    pm = p.resize((mini_w, mini_h), Image.LANCZOS)
+                    px = X_PORTRAIT + j * step
+                    py = cy - mini_h // 2
+                    img.paste(pm, (px, py), mask=pm)
+
+            # "N players" label immediately after the last headshot
+            end_x = X_PORTRAIT + (n - 1) * step + mini_w + gap
+            draw.text((end_x, cy), label, fill=SUBTEXT, font=font_rank, anchor="lm")
+            draw.text((X_COUNT, cy), count_str, fill=GOLD, font=font_count, anchor="rm")
 
     # ── Watermark ─────────────────────────────────────────────────────────────
     wm_layer = Image.new("RGBA", (WIDTH, height), (0, 0, 0, 0))
@@ -204,7 +297,17 @@ def standings_alt_text(
 ) -> str:
     date_str = as_of.strftime("%B %-d, %Y")
     lines = [f"{season} Sombrero Leaders as of {date_str}:"]
-    for i, e in enumerate(entries, 1):
-        org = f" ({e.mlb_org})" if e.mlb_org else ""
-        lines.append(f"{i}. {e.player_name}{org} — {e.sombrero_count}")
+    for row in _build_display_rows(entries):
+        if row["type"] == "empty":
+            break
+        rank = row["rank"]
+        if row["type"] == "individual":
+            e = row["entry"]
+            label = f"T{rank}" if row["is_tied"] else str(rank)
+            org = f" ({e.mlb_org})" if e.mlb_org else ""
+            lines.append(f"{label}. {e.player_name}{org} — {e.sombrero_count}")
+        elif row["type"] == "combined":
+            group = row["group"]
+            names = ", ".join(e.player_name for e in group)
+            lines.append(f"T{rank}. {len(group)} players ({names}) — {group[0].sombrero_count}")
     return " ".join(lines)

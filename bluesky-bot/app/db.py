@@ -280,14 +280,19 @@ class SombreroStandingsEntry:
     sombrero_count: int  # golden+ (k>=4, h=0)
 
 
-def get_sombrero_standings(season: int, top_n: int = 10) -> list[SombreroStandingsEntry]:
+def get_sombrero_standings(season: int, top_n: int = 50) -> list[SombreroStandingsEntry]:
     """Season leaderboard for golden+ sombreros (k>=4), descending."""
     sql = """
         SELECT
             b.player_mlbam_id,
-            p.name      AS player_name,
+            p.name                              AS player_name,
             p.mlb_org,
-            COUNT(*)    AS sombrero_count
+            COUNT(*)                            AS sombrero_count,
+            SUM(COALESCE(b.k, 0))               AS total_k,
+            SUM(COALESCE(b.h, 0))               AS total_h,
+            SUM(COALESCE(b.h, 0) + COALESCE(b.bb, 0)) AS total_tob,
+            SUM(COALESCE(b.ab, 0) + COALESCE(b.bb, 0)) AS total_pa,
+            MIN(b.last_name)                    AS last_name
         FROM statsdb_battingstatline b
         LEFT JOIN statsdb_player p ON p.mlbam_id = b.player_mlbam_id
         WHERE
@@ -295,7 +300,13 @@ def get_sombrero_standings(season: int, top_n: int = 10) -> list[SombreroStandin
             AND EXTRACT(YEAR FROM b.date) = %(season)s
             AND b.game_type = 'R'
         GROUP BY b.player_mlbam_id, p.name, p.mlb_org
-        ORDER BY sombrero_count DESC, p.name
+        ORDER BY
+            sombrero_count DESC,
+            total_k DESC,
+            total_h ASC,
+            total_tob ASC,
+            total_pa ASC,
+            last_name ASC
         LIMIT %(top_n)s
     """
     with _conn() as conn:
