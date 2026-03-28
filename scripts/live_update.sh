@@ -9,7 +9,7 @@ if ! flock -n 9; then
 fi
 
 HOUR=$(date -u '+%H')
-if [ "$HOUR" -lt 5 ]; then
+if [ "$HOUR" -lt 12 ]; then
     DATE=$(date -u -d "yesterday" '+%Y-%m-%d')
 else
     DATE=$(date -u '+%Y-%m-%d')
