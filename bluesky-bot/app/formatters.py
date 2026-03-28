@@ -72,6 +72,8 @@ HISTORICAL_ULTIMATE_SOMBREROS = 8
 
 
 def _ordinal(n: int) -> str:
+    if n < 10:
+        return ['','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth'][n]
     if 11 <= (n % 100) <= 13:
         return f"{n}th"
     return f"{n}{['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]}"
