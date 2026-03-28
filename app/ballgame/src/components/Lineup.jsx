@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useDrop, useDrag } from 'react-dnd'
 import { ItemTypes } from '@/App'
 import { Button } from "@/components/ui/button"
-import { Minus, Lock, Unlock } from 'lucide-react'
+import { Minus, Lock, Unlock, ArrowUpDown, X } from 'lucide-react'
 
 const DB_POSITIONS = {
     lineup_C: "C",
@@ -42,9 +42,23 @@ const OF_POSITIONS = ['LF', 'CF', 'RF', 'OF']
 const IF_POSITIONS = ['2B', 'SS', '3B']
 const HITTER_POSITIONS = ['C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'OF', 'IF', 'OF', 'IF-OF', 'DH']
 
-function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging, onDropPlayer, pendingDrop, onConfirmDrop, onCancelDrop }) {
+function canPlayerGoInSlot(playerPositions, slotPosition) {
+    if (!playerPositions) return false
+    const isOF = playerPositions.some(p => OF_POSITIONS.includes(p))
+    const isHitter = playerPositions.some(p => HITTER_POSITIONS.includes(p))
     return (
-        <div ref={forwardRef} className={`${isDragging ? 'opacity-30' : ''} rounded-md border p-1 pl-2 mx-1 my-0.5 flex flex-row items-center gap-1`}>
+        playerPositions.includes(slotPosition) ||
+        (slotPosition === 'OF' && isOF) ||
+        (IF_POSITIONS.includes(slotPosition) && (playerPositions.includes('IF') || playerPositions.includes('IN'))) ||
+        (slotPosition === 'DH' && isHitter) ||
+        (slotPosition === 'UTIL' && isHitter)
+    )
+}
+
+function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging, onDropPlayer, pendingDrop, onConfirmDrop, onCancelDrop, isMoveSelected, canSwapHere, onSelectMove, onMoveSwap, onCancelMove }) {
+    const isMoving = isMoveSelected || canSwapHere || onCancelMove
+    return (
+        <div ref={forwardRef} className={`${isDragging ? 'opacity-30' : ''} ${isMoveSelected ? 'ring-2 ring-primary' : canSwapHere ? 'ring-2 ring-primary/40' : ''} rounded-md border p-1 pl-2 mx-1 my-0.5 flex flex-row items-center gap-1`}>
             <div className="w-8 shrink-0 text-sm text-center font-bold border-r-2 mr-1 border-border text-muted-foreground">{position}</div>
             <div className="flex-1 min-w-0 overflow-hidden">
                 {playerInfo.fg_id ? (
@@ -66,14 +80,19 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
                     </p>
                 )}
             </div>
-            {playerInfo.fan_total != null && (
+            {playerInfo.fan_total != null && !isMoving && (
                 <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{Number(playerInfo.fan_total).toFixed(1)}</span>
             )}
-            {playerInfo.name && onDropPlayer && !pendingDrop && (
+            {/* Normal mode buttons */}
+            {!isMoving && !pendingDrop && playerInfo.fg_id && onSelectMove && (
+                <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground h-6 w-6 p-0 border border-border bg-muted/50"
+                    onClick={onSelectMove}><ArrowUpDown className="w-3.5 h-3.5" /></Button>
+            )}
+            {!isMoving && playerInfo.name && onDropPlayer && !pendingDrop && (
                 <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground h-6 w-6 p-0 border border-border bg-muted/50 font-bold"
                     onClick={() => onDropPlayer()}><Minus className="w-3.5 h-3.5 stroke-[2.5]" /></Button>
             )}
-            {pendingDrop && (
+            {!isMoving && pendingDrop && (
                 <div className="shrink-0 flex items-center gap-1">
                     <Button variant="ghost" size="sm" className="h-6 px-1 text-xs text-red-600 hover:text-red-800"
                         onClick={onConfirmDrop}>Drop</Button>
@@ -81,11 +100,20 @@ function PlayerSlot({ forwardRef, playerInfo, position, highlighted, isDragging,
                         onClick={onCancelDrop}>Cancel</Button>
                 </div>
             )}
+            {/* Move mode buttons */}
+            {isMoveSelected && (
+                <Button variant="ghost" size="sm" className="shrink-0 h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    onClick={onCancelMove}><X className="w-3.5 h-3.5" /></Button>
+            )}
+            {canSwapHere && (
+                <Button size="sm" className="shrink-0 h-6 px-2 text-xs"
+                    onClick={onMoveSwap}>Swap</Button>
+            )}
         </div>
     )
 }
 
-function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlayer, onDraftPick, onSwapSlots, ...props }) {
+function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlayer, onDraftPick, onSwapSlots, selectedSlot, selectedPlayerPositions, onSelectSlot, onMoveSwap, ...props }) {
     const [playerInfo, setPlayerInfo] = useState({ name: '', stats: '', positions: [], fg_id: null })
     const [pendingDrop, setPendingDrop] = useState(false)
 
@@ -133,14 +161,7 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
     }
 
     function canDrop(item) {
-        const isHitter = item.positions?.some(p => HITTER_POSITIONS.includes(p))
-        const isOF = item.positions?.some(p => OF_POSITIONS.includes(p))
-        const eligible = item.positions?.includes(position)
-        const ofSlotEligible = position === 'OF' && isOF
-        const ifEligible = IF_POSITIONS.includes(position) && (item.positions?.includes('IF') || item.positions?.includes('IN'))
-        const dhSlotEligible = position === 'DH' && isHitter
-        const utilSlotEligible = position === 'UTIL' && isHitter
-        return eligible || ofSlotEligible || ifEligible || dhSlotEligible || utilSlotEligible
+        return canPlayerGoInSlot(item.positions, position)
     }
 
     const [{ highlighted }, drop] = useDrop(() => ({
@@ -159,6 +180,9 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
 
     const combinedRef = useCallback(node => { drag(node); drop(node) }, [drag, drop])
 
+    const isMoveSelected = selectedSlot === db_position
+    const canSwapHere = !!(selectedSlot && selectedSlot !== db_position && canPlayerGoInSlot(selectedPlayerPositions, position))
+
     return (
         <PlayerSlot
             forwardRef={combinedRef}
@@ -170,6 +194,11 @@ function PlayerSlotWrapper({ position, db_position, setDisplayLineup, onDropPlay
             pendingDrop={pendingDrop}
             onConfirmDrop={() => { setPendingDrop(false); onDropPlayer(playerInfo.fg_id) }}
             onCancelDrop={() => setPendingDrop(false)}
+            isMoveSelected={isMoveSelected}
+            canSwapHere={canSwapHere}
+            onSelectMove={onSwapSlots && playerInfo.fg_id ? () => onSelectSlot(db_position) : null}
+            onMoveSwap={canSwapHere ? () => onMoveSwap(db_position) : null}
+            onCancelMove={isMoveSelected ? () => onSelectSlot(null) : (selectedSlot ? () => {} : null)}
         />
     )
 }
@@ -179,6 +208,7 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
     const [displayLineup, setDisplayLineup] = useState({})
     const [teamInfo, setTeamInfo] = useState(null)
     const [lockInfo, setLockInfo] = useState(null)
+    const [selectedSlot, setSelectedSlot] = useState(null)
 
     const refreshLineup = useCallback(() => {
         if (!team) return
@@ -212,6 +242,15 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
         axios.post('/api/lineup', { team, ...changes })
             .then(() => refreshLineup())
             .catch(err => console.error(err))
+    }
+
+    function handleMoveSwap(targetSlot) {
+        const sourceSlot = selectedSlot
+        setSelectedSlot(null)
+        const sourceFgId = serverLineup[sourceSlot]?.fg_id
+        const targetFgId = serverLineup[targetSlot]?.fg_id ?? null
+        setDisplayLineup(f => ({ ...f, [targetSlot]: serverLineup[sourceSlot], [sourceSlot]: serverLineup[targetSlot] ?? null }))
+        handleSwapSlots(sourceSlot, targetSlot, sourceFgId, targetFgId)
     }
 
     function handleDropPlayer(fgId) {
@@ -269,7 +308,11 @@ export default function LineupCard({ team, rosterVersion, onRosterChange, onDraf
                         setDisplayLineup={setDisplayLineup}
                         onDropPlayer={onDraftPick ? null : handleDropPlayer}
                         onDraftPick={onDraftPick}
-                        onSwapSlots={onDraftPick ? null : handleSwapSlots}
+                        onSwapSlots={handleSwapSlots}
+                        selectedSlot={selectedSlot}
+                        selectedPlayerPositions={selectedSlot ? serverLineup[selectedSlot]?.positions : null}
+                        onSelectSlot={setSelectedSlot}
+                        onMoveSwap={handleMoveSwap}
                     />
                 </React.Fragment>
             ))}
