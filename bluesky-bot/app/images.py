@@ -44,7 +44,6 @@ RULE       = (210, 210, 218, 255)
 WATERMARK  = (150, 150, 165, 255)
 
 MIN_DISPLAY_ROWS = 5
-MAX_DISPLAY_ROWS = 10
 MAX_RANK_GROUPS  = 5
 
 SCALE           = 2
@@ -114,8 +113,8 @@ def _build_display_rows(entries: list[SombreroStandingsEntry]) -> list[dict]:
     """
     Groups entries by sombrero_count and returns a list of display row dicts.
 
-    Only rank 1 (first-place) expands beyond MIN_DISPLAY_ROWS rows. All other
-    rank groups share whatever space remains up to the target row count.
+    Hard cap of MIN_DISPLAY_ROWS rows. Any tied group that fits within the
+    remaining row budget is expanded into individual rows; otherwise combined.
 
     Row dict keys:
       type      "individual" | "combined" | "empty"
@@ -134,44 +133,25 @@ def _build_display_rows(entries: list[SombreroStandingsEntry]) -> list[dict]:
 
     rows: list[dict] = []
     rank = 1
+    remaining = MIN_DISPLAY_ROWS
+    rank_groups_shown = 0
 
-    if not groups:
-        # No entries at all — fall through to padding
-        pass
-    else:
-        # ── Rank 1 group ──────────────────────────────────────────────────────
-        _, rank1_entries = groups[0]
-        is_tied = len(rank1_entries) > 1
-        if len(rank1_entries) <= MAX_DISPLAY_ROWS:
-            for entry in rank1_entries:
+    for _, group_entries in groups:
+        if remaining <= 0 or rank_groups_shown >= MAX_RANK_GROUPS:
+            break
+        is_tied = len(group_entries) > 1
+        if len(group_entries) <= remaining:
+            for entry in group_entries:
                 rows.append({"type": "individual", "rank": rank, "is_tied": is_tied, "entry": entry})
+            remaining -= len(group_entries)
         else:
-            rows.append({"type": "combined", "rank": rank, "is_tied": is_tied, "group": rank1_entries})
-        rank += len(rank1_entries)
+            rows.append({"type": "combined", "rank": rank, "is_tied": is_tied, "group": group_entries})
+            remaining -= 1
+        rank += len(group_entries)
+        rank_groups_shown += 1
 
-        # Target total rows: rank 1 may expand beyond MIN_DISPLAY_ROWS
-        target = max(MIN_DISPLAY_ROWS, len(rows))
-        remaining = target - len(rows)
-
-        # ── Rank 2+ groups ────────────────────────────────────────────────────
-        rank_groups_shown = 1
-        for _, group_entries in groups[1:]:
-            if remaining <= 0 or rank_groups_shown >= MAX_RANK_GROUPS:
-                break
-            is_tied = len(group_entries) > 1
-            if len(group_entries) <= remaining:
-                for entry in group_entries:
-                    rows.append({"type": "individual", "rank": rank, "is_tied": is_tied, "entry": entry})
-                remaining -= len(group_entries)
-            else:
-                rows.append({"type": "combined", "rank": rank, "is_tied": is_tied, "group": group_entries})
-                remaining -= 1
-            rank += len(group_entries)
-            rank_groups_shown += 1
-
-    # ── Pad to target (at least MIN_DISPLAY_ROWS) ─────────────────────────────
-    target = max(MIN_DISPLAY_ROWS, len(rows))
-    while len(rows) < target:
+    # ── Pad to MIN_DISPLAY_ROWS ───────────────────────────────────────────────
+    while len(rows) < MIN_DISPLAY_ROWS:
         rows.append({"type": "empty", "rank": rank})
         rank += 1
 
@@ -253,11 +233,13 @@ def generate_standings_image(
             count_w = int(font_count.getlength(count_str))
             label_w = int(font_rank.getlength(label))
             gap = 8 * SCALE
-            # Headshots fill from X_PORTRAIT up to where the label begins
+            # Maximum space available between portrait start and label+count
             avail = X_COUNT - count_w - gap - label_w - gap - X_PORTRAIT
             mini_w = min(MINI_PORTRAIT_W, max(2 * SCALE, avail))
             mini_h = int(PORTRAIT_H * mini_w / PORTRAIT_W)
-            step = 0 if n <= 1 else max(2 * SCALE, (avail - mini_w) // (n - 1))
+            # Use no-overlap step; only shrink to fit if needed
+            max_step = (avail - mini_w) // (n - 1) if n > 1 else 0
+            step = 0 if n <= 1 else max(2 * SCALE, min(mini_w + gap, max_step))
 
             # Fetch all portraits upfront
             portraits = [_fetch_headshot(e.player_id) for e in group]
