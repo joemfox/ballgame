@@ -125,7 +125,8 @@ def has_active_games(game_date: date, r_schedule: list | None = None) -> bool:
         r_schedule = fetch_r_schedule(game_date)
     if not r_schedule:
         return False
-    return not all(g.get("status") in _FINAL_STATUSES for g in r_schedule)
+    terminal = _FINAL_STATUSES | _SKIP_STATUSES
+    return not all(g.get("status") in terminal for g in r_schedule)
 
 
 def has_any_games(game_date: date) -> bool:
